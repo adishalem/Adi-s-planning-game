@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>עיר ואם-אמק</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Rubik:wght@400;500&display=swap">
+<style>
+:root{--bg:#0e2238;--card:#16304d;--line:rgba(173,205,240,.22);--ink:#eef4fb;--muted:#a9bdd3;--accent:#ffd23d;--accent-ink:#1b1400;color-scheme:dark}
+body{margin:0;min-height:100vh;background:radial-gradient(1200px 600px at 70% -10%,#1f4a78,var(--bg));color:var(--ink);font-family:Rubik,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px 16px;box-sizing:border-box}
+main{width:min(720px,100%);display:grid;gap:18px}
+h1{margin:0;font-family:"Secular One",Rubik,sans-serif;font-weight:400;font-size:clamp(2.2rem,7vw,3.4rem);color:var(--accent);line-height:1}
+p{margin:0;color:var(--muted);line-height:1.6}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+a.card{display:grid;gap:6px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);text-decoration:none}
+a.card b{font-family:"Secular One",Rubik,sans-serif;font-weight:400;font-size:1.25rem}
+a.card small{color:var(--muted);line-height:1.5}
+a.card.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}a.card.pri small{color:#3b3000}
+a.card:hover{border-color:#fff}a.card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+</style>
+<main>
+  <h1>עיר ואם-אמק</h1>
+  <p>משחק בניית עיר על חוק התכנון והבנייה. מקדמים תוכניות, מתמודדים עם ועדות, התנגדויות, רישוי ואכיפה, ומנסים להגיע ליעדי התוכנית האסטרטגית.</p>
+  <div class="cards">
+    <a class="card pri" href="game.html"><b>למשחק</b><small>המשחק המלא, נשמר בדפדפן שלכם</small></a>
+    <a class="card" href="city3d.html"><b>העיר בתלת ממד</b><small>אב טיפוס: העיר והאזור, עם אנשים ותנועה</small></a>
+    <a class="card" href="process-map.html"><b>מפת התהליכים</b><small>השלבים שעליהם המשחק בנוי</small></a>
+  </div>
+  <p style="font-size:.8rem">המספרים במשחק להמחשה בלבד, והוא לא מהווה ייעוץ משפטי.</p>
+</main>
+</html>

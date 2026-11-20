@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>הופקד! מפת תהליכים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&family=IBM+Plex+Sans+Hebrew:wght@400;500;700&display=swap">
+<style>
+/* Layout: a planning file (תיק תכנון). Single reading column, stage tables like a committee agenda, red rubber stamps as the one flourish. */
+:root{
+  --paper:#f6f7f3; --sheet:#ffffff; --ink:#1d2421; --muted:#5d6762; --line:#d6dbd5;
+  --stamp:#b3261e; --blue:#1f4e79; --chip:#eef1ec;
+  --res:#f3d75a; --pub:#9a6a3c; --open:#6fae5a; --ind:#8a6bb8; --road:#d0574a; --agri:#dfe9c9;
+  --display:"Suez One","Frank Ruhl Libre",Georgia,serif;
+  --body:"IBM Plex Sans Hebrew","Assistant",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#141816; --sheet:#1c211f; --ink:#e7ebe7; --muted:#9aa49e; --line:#333b37;
+  --stamp:#ef6b60; --blue:#7fb2e0; --chip:#262d2a; --agri:#36412c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#141816; --sheet:#1c211f; --ink:#e7ebe7; --muted:#9aa49e; --line:#333b37;
+  --stamp:#ef6b60; --blue:#7fb2e0; --chip:#262d2a; --agri:#36412c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65;direction:rtl}
+.wrap{max-width:980px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:clamp(2.4rem,7vw,4rem);color:var(--ink)}
+h2{font-size:1.75rem}
+h3{font-size:1.15rem}
+p{margin:0;max-width:65ch}
+.eyebrow{font-size:.8rem;letter-spacing:.06em;color:var(--muted);font-weight:500}
+section{display:flex;flex-direction:column;gap:18px}
+.lede{font-size:1.15rem;color:var(--muted)}
+.hero{display:flex;flex-direction:column;gap:14px;position:relative}
+.stamp{display:inline-block;font-family:var(--display);color:var(--stamp);border:3px solid var(--stamp);border-radius:6px;padding:2px 12px;transform:rotate(-6deg);font-size:1.1rem;opacity:.9}
+.hero .stamp{position:absolute;top:6px;left:0;font-size:1.6rem}
+.decisions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.dec{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.dec b{font-weight:700}
+.dec span{color:var(--muted);font-size:.95rem}
+/* hierarchy */
+.tiers{display:flex;flex-direction:column;gap:6px}
+.tier{display:grid;grid-template-columns:150px 1fr 1.2fr;gap:14px;align-items:start;background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:12px 16px}
+.tier>*{min-width:0}
+.tier .name{font-family:var(--display);font-size:1.05rem}
+.tier .who{color:var(--muted);font-size:.92rem}
+.tier .game{font-size:.95rem}
+.tier.fast{border-color:var(--stamp)}
+.tier.fast .name{color:var(--stamp)}
+.indent1{margin-right:0}
+@media (max-width:640px){.tier{grid-template-columns:1fr;gap:4px}}
+/* stage tables */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--sheet)}
+table{border-collapse:collapse;width:100%;min-width:700px;font-size:.95rem}
+th,td{text-align:right;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:.82rem;letter-spacing:.04em;background:var(--chip)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--display);color:var(--blue);width:36px;font-variant-numeric:tabular-nums}
+td.st{font-weight:700;width:180px}
+td.who{color:var(--muted);width:170px}
+.verify{display:inline-block;font-size:.72rem;font-weight:500;color:var(--stamp);border:1px solid var(--stamp);border-radius:999px;padding:0 8px;margin-inline-start:6px;white-space:nowrap}
+.loop{color:var(--stamp);font-weight:500}
+/* cast */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media (max-width:700px){.cols{grid-template-columns:1fr}}
+.cols>div{min-width:0;display:flex;flex-direction:column;gap:10px}
+ul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+ul.plain li{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:9px 14px}
+ul.plain li b{font-weight:700}
+ul.plain li span{color:var(--muted)}
+/* map */
+.mapbox{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.mapbox{grid-template-columns:1fr}}
+.mapsvg{width:100%;height:auto;background:var(--sheet);border:1px solid var(--line);border-radius:8px;display:block}
+.site{cursor:pointer}
+.site rect.hl{fill:transparent;stroke:var(--ink);stroke-width:3;stroke-dasharray:7 5}
+.site.on rect.hl{stroke:var(--stamp);stroke-width:4}
+.site text{font-family:var(--display);font-size:22px;fill:var(--ink)}
+.site:focus{outline:none}.site:focus-visible rect.hl{stroke:var(--blue)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-inline-end:5px;border:1px solid var(--line)}
+.sitecard{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.sitecard .tabs{display:flex;gap:6px;flex-wrap:wrap}
+.sitecard button{font:inherit;font-size:.9rem;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 14px;cursor:pointer}
+.sitecard button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.sitecard dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.93rem}
+.sitecard dt{color:var(--muted)}
+.sitecard dd{margin:0}
+/* reform lab */
+.lab{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:18px}
+.toggles{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.toggles label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer;min-width:0}
+.toggles input{margin-top:5px;accent-color:var(--stamp)}
+.toggles label b{display:block}
+.toggles label span{color:var(--muted);font-size:.88rem}
+.bars{display:flex;flex-direction:column;gap:10px}
+.barrow{display:grid;grid-template-columns:110px 1fr 70px;gap:10px;align-items:center;font-size:.9rem}
+.track{height:22px;background:var(--chip);border-radius:4px;overflow:hidden;display:flex}
+.seg{height:100%;transition:width .4s ease}
+.seg.plan{background:var(--blue)}
+.seg.permit{background:var(--pub)}
+.seg.build{background:var(--muted);opacity:.55}
+.num{font-variant-numeric:tabular-nums;text-align:left;font-weight:500}
+.effects{display:flex;flex-wrap:wrap;gap:8px}
+.eff{font-size:.85rem;border-radius:999px;padding:3px 12px;background:var(--chip)}
+.eff.bad{color:var(--stamp);border:1px solid var(--stamp);background:transparent}
+.eff.good{color:var(--blue);border:1px solid var(--blue);background:transparent}
+.note{font-size:.85rem;color:var(--muted)}
+ol.next{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:8px;max-width:70ch}
+@media (prefers-reduced-motion:reduce){.seg{transition:none}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <span class="stamp" aria-hidden="true">הופקד</span>
+  <span class="eyebrow">משחק תכנון, טיוטת מסמך עיצוב 1</span>
+  <h1>הופקד!</h1>
+  <p class="lede">משחק בניית עיר שבו החוקים הם חוק התכנון והבנייה. את/ה מהנדס/ת העיר, ובכל שלב בדרך מהרעיון ועד טופס 4 יש החלטה לקבל או סיכון לנהל. שם עבודה בלבד, פתוח לשינוי.</p>
+</header>
+
+<section>
+  <span class="eyebrow">מה כבר הוחלט</span>
+  <div class="decisions">
+    <div class="dec"><b>השחקן</b><span>הרשות ומהנדס/ת העיר. מקדמים תוכניות ומתמרנים בין פוליטיקה, יזמים, החוק והוועדה המחוזית.</span></div>
+    <div class="dec"><b>הקהל</b><span>סטודנטים לתכנון ועובדי ועדות. המשחק משמש כלי לימוד.</span></div>
+    <div class="dec"><b>הטון</b><span>אירוני. ממחיש כמה מסורבל התכנון בישראל, אבל מדויק מספיק כדי ללמוד ממנו.</span></div>
+    <div class="dec"><b>מעבדת רפורמות</b><span>מפעילים רפורמות מומצאות ורואים איך הן משנות זמנים, איכות וסיכונים.</span></div>
+    <div class="dec"><b>הפרוסה הראשונה</b><span>אתרי פיתוח לבחירה על גבי התב"ע של העיר: מוסד חינוך, שכונה ואזור תעשייה, עם השפעה על השכנים.</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">שכבה 1</span>
+  <h2>היררכיית התוכניות</h2>
+  <p>כל שכבה כפופה לזו שמעליה. במשחק השכבות העליונות הן "חוקי הטבע", וככל שיורדים, לשחקן יש יותר שליטה.</p>
+  <div class="tiers">
+    <div class="tier"><div class="name">תמ"א</div><div class="who">מועצה ארצית, אישור ממשלה</div><div class="game">חוקי הטבע. השחקן לא משנה אותן, רק נתקל בהן. למשל מרקמים ושטחים פתוחים לפי תמ"א 35.</div></div>
+    <div class="tier"><div class="name">תמ"מ</div><div class="who">ועדה מחוזית ומועצה ארצית</div><div class="game">גבולות האפשר במחוז. קובעת איפה מותר בכלל לחשוב על שכונה.</div></div>
+    <div class="tier fast"><div class="name">תמ"ל</div><div class="who">ותמ"ל, מתחמים מועדפים לדיור</div><div class="game">קלף "מסלול מהיר". עוקף את המחוזית, אבל השליטה עוברת למדינה, והרשות מקבלת שכונה גדולה עם פרוגרמה ציבורית שהיא לא תכננה.</div></div>
+    <div class="tier fast"><div class="name">תת"ל</div><div class="who">ולנת"ע, תשתיות לאומיות</div><div class="game">קלף אירוע. כביש או קו מתח עוברים בעיר, והשחקן יכול רק להגיב.</div></div>
+    <div class="tier"><div class="name">תוכנית מתאר כוללנית</div><div class="who">ועדה מחוזית</div><div class="game">השקעה ארוכה ויקרה שפותחת "עץ מיומנויות": סמכויות לוועדה המקומית ותוכניות בסמכות מקומית.</div></div>
+    <div class="tier"><div class="name">תוכנית מפורטת (תב"ע)</div><div class="who">מקומית או מחוזית, לפי סמכות</div><div class="game">היחידה הבסיסית של המשחק. כל אתר פיתוח מתחיל כאן.</div></div>
+    <div class="tier"><div class="name">היתר בנייה</div><div class="who">רשות רישוי או ועדה מקומית</div><div class="game">המסלול השני, מהתוכנית ועד מבנה מאוכלס.</div></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">שכבה 2</span>
+  <h2>מסלול תוכנית, מייזום ועד מתן תוקף</h2>
+  <p>הסדר מתאר תוכנית בסמכות ועדה מחוזית. בתוכנית בסמכות מקומית חלק מהשלבים עוברים לוועדה המקומית. העמודה האחרונה היא מה שהשחקן עושה בכל שלב.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>שלב</th><th>מי מחליט</th><th>מכניקת משחק</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="st">ייזום ופרוגרמה</td><td class="who">מהנדס/ת העיר, יזם, רמ"י</td><td>בחירת אתר, פרוגרמה (יח"ד, כיתות, שצ"פ), גיוס יועצים. ההחלטה הראשונה: יוזמה עירונית או המתנה ליזם.</td></tr>
+      <tr><td class="n">2</td><td class="st">הכנת מסמכי התוכנית</td><td class="who">צוות התכנון</td><td>תשריט והוראות לפי מבא"ת, נספחי תנועה, ניקוז, סביבה ונוף. מתח בין איכות התיק לזמן: קיצורים כאן מעלים סיכון בשלב 4.</td></tr>
+      <tr><td class="n">3</td><td class="st">דיון והמלצה בוועדה המקומית</td><td class="who">חברי הוועדה המקומית</td><td>פוליטיקה מקומית. צריך רוב בוועדה, והאופוזיציה מחכה.</td></tr>
+      <tr><td class="n">4</td><td class="st">בדיקת תנאי סף</td><td class="who">לשכת התכנון המחוזית</td><td>רשימת חוסרים שחוזרת אליך. <span class="loop">לולאה עד שהתיק שלם.</span></td></tr>
+      <tr><td class="n">5</td><td class="st">דיון להפקדה</td><td class="who">ועדה מחוזית</td><td>שלוש תוצאות: הפקדה, הפקדה בתנאים, דחייה. היחסים עם המחוזית משפיעים על הסיכויים.</td></tr>
+      <tr><td class="n">6</td><td class="st">מילוי תנאים להפקדה</td><td class="who">צוות התכנון ולשכת התכנון</td><td>לא פעם השלב הארוך במסלול, והאירוניה כותבת את עצמה. כל תנאי הוא משימת צד.</td></tr>
+      <tr><td class="n">7</td><td class="st">הפקדה ופרסום</td><td class="who">ועדה מחוזית</td><td>פרסום ברשומות, בעיתונים ובשלט במקום. נפתחת תקופת התנגדויות של 60 יום. מי שהשקיע בשיתוף ציבור מראש מקבל פחות התנגדויות.</td></tr>
+      <tr><td class="n">8</td><td class="st">שמיעת התנגדויות</td><td class="who">ועדה מחוזית, לעתים חוקר</td><td>לכל התנגדות: לקבל, לדחות או לשנות. <span class="loop">שינוי מהותי מחייב פרסום מחדש, וחוזרים לשלב 7.</span><span class="verify">לאמת</span></td></tr>
+      <tr><td class="n">9</td><td class="st">אישור ופרסום למתן תוקף</td><td class="who">ועדה מחוזית</td><td>התוכנית בתוקף. כאן נפתח מסלול ההיתר, ונוצרת חבות היטל השבחה במימוש.</td></tr>
+      <tr><td class="n">10</td><td class="st">ערר ועתירה</td><td class="who">מועצה ארצית, בית משפט לעניינים מנהליים</td><td>קלף סיכון שיכול להקפיא הכול. גובהו תלוי בכמה התנגדויות נדחו ואיך.<span class="verify">לאמת</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">שכבה 3</span>
+  <h2>מסלול היתר, עד טופס 4</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>שלב</th><th>מי מחליט</th><th>מכניקת משחק</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="st">תיק מידע להיתר</td><td class="who">הוועדה המקומית</td><td>הרשות מגדירה מראש מה נדרש. תיק מידע מדויק חוסך סבבים בהמשך.<span class="verify">לאמת מועדים</span></td></tr>
+      <tr><td class="n">2</td><td class="st">הגשת בקשה ובדיקה</td><td class="who">רשות הרישוי</td><td>הגשה במערכת המקוונת ובדיקה מרחבית מול התוכנית.</td></tr>
+      <tr><td class="n">3</td><td class="st">הקלה או שימוש חורג</td><td class="who">ועדה מקומית, פרסום לציבור</td><td>ההחלטה המרכזית: הקלה מהירה עם פרסום והתנגדויות, או שינוי תוכנית איטי ויציב.</td></tr>
+      <tr><td class="n">4</td><td class="st">בקרת תכן</td><td class="who">מכון בקרה או הוועדה</td><td>מנגנון שהשתנה ברפורמה, ויכול לשמש דוגמה ל"לפני ואחרי" במעבדת הרפורמות.<span class="verify">לאמת סטטוס</span></td></tr>
+      <tr><td class="n">5</td><td class="st">החלטה והיתר בתנאים</td><td class="who">רשות רישוי או ועדה</td><td>מקבלים רשימת תנאים, והשעון ממשיך לתקתק.</td></tr>
+      <tr><td class="n">6</td><td class="st">תנאים למתן היתר</td><td class="who">גורמי חוץ, מחלקת הגבייה</td><td>היטלי פיתוח, היטל השבחה, אישורי פיקוד העורף, כבאות, רשות העתיקות ותאגיד המים. כל גורם הוא דמות עם מצב רוח.</td></tr>
+      <tr><td class="n">7</td><td class="st">היתר ותחילת עבודות</td><td class="who">מבקש ההיתר, אחראי לביקורת</td><td>מינוי בעלי תפקידים וקבלן רשום, והודעה על תחילת עבודות.</td></tr>
+      <tr><td class="n">8</td><td class="st">ביצוע ופיקוח</td><td class="who">פיקוח הוועדה</td><td>קלפי אירוע: ממצא עתיקות, סטייה מהיתר, שכנים שמתלוננים על רעש.</td></tr>
+      <tr><td class="n">9</td><td class="st">טופס 4 ותעודת גמר</td><td class="who">הוועדה המקומית</td><td>חיבור לתשתיות ואכלוס. סוף השלב, והתושבים נכנסים לעיר ומשפיעים על המדדים.<span class="verify">לאמת מינוח</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">שכבה 4</span>
+  <h2>משאבים ודמויות</h2>
+  <div class="cols">
+    <div>
+      <h3>מה השחקן מנהל</h3>
+      <ul class="plain">
+        <li><b>זמן</b> <span>בחודשים. המשאב שהכי קל לאבד.</span></li>
+        <li><b>תקציב הרשות</b> <span>יועצים, הכנת תוכניות, תשתיות. מתמלא מהיטלים וארנונה.</span></li>
+        <li><b>הון פוליטי</b> <span>מנוצל בוועדה המקומית ונשחק לקראת בחירות.</span></li>
+        <li><b>אמון הציבור</b> <span>קובע כמה התנגדויות יגיעו.</span></li>
+        <li><b>יחסים עם המחוזית</b> <span>תיקים מסודרים משפרים, מחטפים פוגעים.</span></li>
+        <li><b>פער שירותים</b> <span>שכונה בלי בית ספר מייצרת לחץ שמתעצם עם הזמן.</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3>מי מסביב</h3>
+      <ul class="plain">
+        <li><b>ראש העיר</b> <span>רוצה טקס חנוכה לפני הבחירות.</span></li>
+        <li><b>יזמים</b> <span>מביאים כסף ולחץ, רוצים זכויות.</span></li>
+        <li><b>ועד השכונה</b> <span>מתנגד לכל מה שקרוב מדי.</span></li>
+        <li><b>עמותות סביבה</b> <span>מגישות התנגדויות מנומקות היטב.</span></li>
+        <li><b>מתכננת המחוז</b> <span>שומרת סף, עמוסה, זוכרת הכול.</span></li>
+        <li><b>רמ"י ומשרדי ממשלה</b> <span>בעלי הקרקע, פרוגרמות החינוך והשיכון.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">שכבה 5</span>
+  <h2>הפרוסה הראשונה: לבחור מה לפתח</h2>
+  <p>מפת תב"ע מומצאת של עיר קיימת. שלושה אתרים מסומנים, ולכל אחד מסלול אחר והשפעה אחרת על השכנים. בחרו אתר כדי לראות.</p>
+  <div class="mapbox">
+    <div>
+      <svg class="mapsvg" viewBox="0 0 600 400" role="group" aria-label="מפת תב&quot;ע לדוגמה">
+        <rect x="0" y="0" width="600" height="400" fill="var(--agri)"/>
+        <rect x="300" y="20" width="280" height="170" fill="var(--res)"/>
+        <rect x="300" y="210" width="130" height="80" fill="var(--res)"/>
+        <rect x="440" y="210" width="140" height="80" fill="var(--open)"/>
+        <rect x="300" y="300" width="280" height="80" fill="var(--res)"/>
+        <rect x="20" y="300" width="140" height="80" fill="var(--ind)" opacity=".8"/>
+        <rect x="0" y="190" width="600" height="20" fill="var(--road)"/>
+        <rect x="280" y="0" width="20" height="400" fill="var(--road)"/>
+        <rect x="0" y="280" width="280" height="14" fill="var(--road)" opacity=".7"/>
+        <g class="site" data-site="edu" tabindex="0" role="button" aria-label="אתר א, מגרש חום">
+          <rect x="440" y="220" width="0" height="0"/>
+          <rect x="315" y="215" width="105" height="70" fill="var(--pub)"/>
+          <rect class="hl" x="312" y="212" width="111" height="76" rx="4"/>
+          <text x="367" y="258" text-anchor="middle" fill="#fff" style="fill:#fff">א</text>
+        </g>
+        <g class="site" data-site="nbh" tabindex="0" role="button" aria-label="אתר ב, שטח חקלאי">
+          <rect class="hl" x="30" y="30" width="230" height="145" rx="4"/>
+          <text x="145" y="112" text-anchor="middle">ב</text>
+        </g>
+        <g class="site" data-site="ind" tabindex="0" role="button" aria-label="אתר ג, ליד אזור התעשייה">
+          <rect class="hl" x="170" y="300" width="100" height="80" rx="4"/>
+          <text x="220" y="348" text-anchor="middle">ג</text>
+        </g>
+      </svg>
+      <div class="legend" style="margin-top:10px">
+        <span><i style="background:var(--res)"></i>מגורים</span>
+        <span><i style="background:var(--pub)"></i>מבני ציבור</span>
+        <span><i style="background:var(--open)"></i>שצ"פ</span>
+        <span><i style="background:var(--ind)"></i>תעשייה</span>
+        <span><i style="background:var(--road)"></i>דרך</span>
+        <span><i style="background:var(--agri)"></i>קרקע חקלאית</span>
+      </div>
+      <p class="note" style="margin-top:6px">צבעים בהשראת מבא"ת. בהמשך אפשר להחליף בשכבות תב"ע אמיתיות.</p>
+    </div>
+    <div class="sitecard" aria-live="polite">
+      <div class="tabs">
+        <button type="button" id="b-edu" data-site="edu" aria-pressed="true">א, מוסד חינוך</button>
+        <button type="button" id="b-nbh" data-site="nbh" aria-pressed="false">ב, שכונה</button>
+        <button type="button" id="b-ind" data-site="ind" aria-pressed="false">ג, תעשייה</button>
+      </div>
+      <h3 id="s-title"></h3>
+      <dl>
+        <dt>מסלול</dt><dd id="s-route"></dd>
+        <dt>שכנים</dt><dd id="s-nb"></dd>
+        <dt>ההחלטה</dt><dd id="s-dec"></dd>
+        <dt>סיכון</dt><dd id="s-risk"></dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">שכבה 6</span>
+  <h2>מעבדת רפורמות</h2>
+  <p>מסלול לדוגמה של שכונה מהייזום ועד האכלוס. הפעילו רפורמות מומצאות וראו מה קורה לזמנים ומה מתחיל להשתבש.</p>
+  <div class="lab">
+    <div class="toggles">
+      <label for="r-clock"><input type="checkbox" id="r-clock"><div><b>שעון עצר</b><span>כל מוסד מחליט תוך 90 יום, אחרת השלב עובר אוטומטית.</span></div></label>
+      <label for="r-onefile"><input type="checkbox" id="r-onefile"><div><b>תיק אחד</b><span>תנאי סף ותנאים להפקדה נבדקים יחד, פעם אחת.</span></div></label>
+      <label for="r-public"><input type="checkbox" id="r-public"><div><b>שיתוף ציבור חובה מראש</b><span>מוסיף זמן בהתחלה, מוריד התנגדויות ועררים.</span></div></label>
+      <label for="r-local"><input type="checkbox" id="r-local"><div><b>עצמאות לכל ועדה מקומית</b><span>התוכנית נשארת בסמכות מקומית ולא עוברת במחוזית.</span></div></label>
+      <label for="r-permit"><input type="checkbox" id="r-permit"><div><b>היתר מתוקף תוכנית</b><span>תוכנית מפורטת מספיק מקצרת את מסלול ההיתר.</span></div></label>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="effects" id="effects"></div>
+    <p class="note">המספרים להמחשה בלבד ואינם נתונים אמיתיים. במשחק הם יגיעו מקובץ חוקים שאפשר לערוך.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">הצעדים הבאים</span>
+  <h2>מה עושים עכשיו</h2>
+  <ol class="next">
+    <li>לעבור על השלבים ולתקן לפי הניסיון שלך, בעיקר במקומות שמסומנים "לאמת".</li>
+    <li>להפוך את הטבלאות לקובץ חוקים: לכל שלב משך, עלות, תנאי מעבר וסיכונים. זה הלב של המשחק.</li>
+    <li>לבנות פרוטוטייפ בדפדפן לאתר אחד מתוך השלושה, מהייזום ועד טופס 4.</li>
+    <li>להוסיף את מעבדת הרפורמות על אותו קובץ חוקים.</li>
+  </ol>
+</section>
+
+</div>
+
+<script>
+(function(){
+  var sites={
+    edu:{t:"אתר א: בית ספר על מגרש חום קיים",route:"היתר בלבד. הייעוד כבר מבני ציבור בתוכנית בתוקף, אז מדלגים על מסלול התוכנית.",nb:"מגורים מצפון ומדרום, שצ\"פ ממזרח. בונוס לאמון הציבור, אבל תנועה בשעות הבוקר.",dec:"לבנות לפי הזכויות הקיימות, או לבקש הקלה בגובה ולקבל עוד כיתות.",risk:"נמוך. ההקלה מוסיפה פרסום ומעט התנגדויות."},
+    nbh:{t:"אתר ב: שכונה חדשה על קרקע חקלאית",route:"מסלול תוכנית מלא, כולל שינוי ייעוד ובדיקה מול תמ\"א 35. אפשר גם לנסות להיכנס לתמ\"ל.",nb:"גובלת בדרך הראשית. תוסיף אלפי תושבים ותיצור פער שירותים אם לא יתוכננו מבני ציבור.",dec:"תוכנית עירונית בשליטתך, או קלף תמ\"ל מהיר שמעביר את השליטה למדינה.",risk:"גבוה. התנגדויות של חקלאים ועמותות סביבה, ואפשרות ערר."},
+    ind:{t:"אתר ג: הרחבת אזור התעשייה",route:"תוכנית מפורטת להרחבה, ואחר כך היתרים למגרשים לפי ביקוש יזמים.",nb:"צמוד לתעשייה קיימת, אבל המגורים ממזרח יגישו התנגדויות על מטרדים.",dec:"תעשייה עתירת ארנונה עם מטרדים, או תעסוקה נקייה עם הכנסה נמוכה יותר.",risk:"בינוני. דרוש נספח סביבתי טוב כדי לעבור את הוועדה המחוזית."}
+  };
+  function show(k){
+    var s=sites[k];
+    document.getElementById('s-title').textContent=s.t;
+    document.getElementById('s-route').textContent=s.route;
+    document.getElementById('s-nb').textContent=s.nb;
+    document.getElementById('s-dec').textContent=s.dec;
+    document.getElementById('s-risk').textContent=s.risk;
+    document.querySelectorAll('.sitecard button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.site===k?'true':'false')});
+    document.querySelectorAll('.site').forEach(function(g){g.classList.toggle('on',g.dataset.site===k)});
+  }
+  document.querySelectorAll('[data-site]').forEach(function(el){
+    el.addEventListener('click',function(){show(el.dataset.site)});
+    el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();show(el.dataset.site)}});
+  });
+  show('edu');
+
+  // illustrative months
+  var base={prep:14,local:3,threshold:3,deposit:6,conds:9,objections:2,hearing:5,validity:3,appeal:6,
+            info:1,request:6,permitconds:5,build:30,form4:4};
+  function compute(r){
+    var m=Object.assign({},base), eff=[];
+    if(r.public){m.prep+=4;m.hearing=2;m.appeal=1;eff.push(['good','פחות התנגדויות ועררים'])}
+    if(r.local){m.threshold=1;m.deposit=3;m.conds=Math.round(m.conds*0.6);eff.push(['bad','פחות בקרה על תכנון אזורי'])}
+    if(r.onefile){m.conds=Math.round(m.conds/2);m.threshold=0;eff.push(['good','פחות סבבי חוסרים'])}
+    if(r.clock){['local','threshold','deposit','hearing','validity','request','permitconds'].forEach(function(k){m[k]=Math.min(m[k],3)});
+      m.appeal+=3;eff.push(['bad','תוכניות חלשות עוברות אוטומטית']);eff.push(['bad','יותר עתירות'])}
+    if(r.permit){m.info=0;m.request=2;eff.push(['bad','פחות גמישות בתכנון המבנה'])}
+    var plan=m.prep+m.local+m.threshold+m.deposit+m.conds+m.objections+m.hearing+m.validity+m.appeal;
+    var permit=m.info+m.request+m.permitconds;
+    return {plan:plan,permit:permit,build:m.build+m.form4,eff:eff};
+  }
+  var baseRes=compute({}), max=baseRes.plan+baseRes.permit+baseRes.build;
+  function row(label,res){
+    var tot=res.plan+res.permit+res.build;
+    return '<div class="barrow"><span>'+label+'</span><div class="track" aria-hidden="true">'+
+      '<div class="seg plan" style="width:'+(res.plan/max*100)+'%"></div>'+
+      '<div class="seg permit" style="width:'+(res.permit/max*100)+'%"></div>'+
+      '<div class="seg build" style="width:'+(res.build/max*100)+'%"></div></div>'+
+      '<span class="num">'+tot+' חודשים</span></div>';
+  }
+  var ids=['clock','onefile','public','local','permit'];
+  function render(){
+    var r={};ids.forEach(function(i){r[i]=document.getElementById('r-'+i).checked});
+    var res=compute(r);
+    document.getElementById('bars').innerHTML=row('היום',baseRes)+row('עם הרפורמות',res)+
+      '<div class="legend"><span><i style="background:var(--blue)"></i>תוכנית</span><span><i style="background:var(--pub)"></i>היתר</span><span><i style="background:var(--muted);opacity:.55"></i>ביצוע וטופס 4</span></div>';
+    var e=res.eff.length?res.eff:[['','לא הופעלו רפורמות']];
+    document.getElementById('effects').innerHTML=e.map(function(x){return '<span class="eff '+x[0]+'">'+x[1]+'</span>'}).join('');
+  }
+  ids.forEach(function(i){document.getElementById('r-'+i).addEventListener('change',render)});
+  render();
+})();
+</script>
+
+</html>
