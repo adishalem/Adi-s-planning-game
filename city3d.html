@@ -1174,15 +1174,15 @@ function cy(rt,rb,h,x,y,z,zs,seg){var g=new THREE.CylinderGeometry(rt,rb,h,Math.
 function wh(r,x,y,z){var g=new THREE.CylinderGeometry(r,r,.05,10);g.rotateZ(Math.PI/2);g.translate(x,y,z);return g}
 function bx(w,h,d,x,y,z){var g=new THREE.BoxGeometry(w,h,d);g.translate(x,y,z);return g}
 function buildBodies(){var n=PPL.length;
- var HAIRS={short:sph(.112,0,1.612,-.012,1,1,1.02,14,10),long:mg([sph(.113,0,1.612,-.012,1,1,1.03,14,10),bx(.22,.3,.07,0,1.47,-.085)]),pony:mg([sph(.112,0,1.612,-.012,1,1,1.02,14,10),sph(.045,0,1.6,-.12),cy(.03,.018,.2,0,1.5,-.13)]),
-  bun:mg([sph(.112,0,1.612,-.012,1,1,1.02,14,10),sph(.055,0,1.7,-.09)]),curly:jitter(new THREE.IcosahedronGeometry(.13,1),.035).translate(0,1.625,-.012)};
- HAIRS.short.attributes.position.array.forEach(function(){});
- var cap=function(g){var p=g.attributes.position;for(var i=0;i<p.count;i++)if(p.getY(i)<1.575)p.setY(i,1.575+(p.getY(i)-1.575)*.25);g.computeVertexNormals();return g};
- ['short','curly'].forEach(function(k){cap(HAIRS[k])});
+ function hcap(r,front,side,back,bump){var g=new THREE.SphereGeometry(r,22,16),p=g.attributes.position;for(var i=0;i<p.count;i++){var x=p.getX(i),y=p.getY(i),z=p.getZ(i),zn=z/r,hl=zn>0?side+(front-side)*zn:side+(side-back)*zn;
+   var k=y<hl?.84:1;if(bump){var w=1+bump*Math.sin(x*90)*Math.sin(y*90)*Math.sin(z*90);k*=w}p.setXYZ(i,x*k,y,z*k)}g.translate(0,1.617,-.01);g.computeVertexNormals();return g}
+ var HAIRS={short:hcap(.117,.05,-.012,-.075),long:mg([hcap(.118,.052,-.085,-.1),sph(.098,0,1.47,-.058,1.02,1.75,.48,12,10)]),pony:mg([hcap(.117,.052,-.02,-.08),sph(.04,0,1.6,-.118,1,1,1,10,8),sph(.034,0,1.49,-.13,.85,2.4,.85,10,8)]),
+  bun:mg([hcap(.117,.052,-.02,-.08),sph(.05,0,1.715,-.07,1,.9,1,10,8)]),curly:hcap(.126,.045,-.02,-.07,.06)};
  // [name, geometry, colour key, segment, used(o)]
  var lt=function(pr,zs,sg){var g=new THREE.LatheGeometry(pr.map(function(q){return new THREE.Vector2(q[0],q[1])}),sg||14);g.scale(1,1,zs||1);return g};
  var TM=[[.05,.97],[.132,.985],[.137,1.03],[.135,1.1],[.157,1.2],[.177,1.3],[.188,1.37],[.18,1.415],[.135,1.455],[.06,1.482]],TF=[[.05,.97],[.137,.985],[.132,1.04],[.117,1.11],[.142,1.22],[.16,1.3],[.165,1.37],[.155,1.415],[.112,1.452],[.05,1.478]];
- var D=[['head',lt([[.001,1.487],[.05,1.5],[.078,1.53],[.098,1.575],[.104,1.62],[.098,1.665],[.078,1.7],[.045,1.722],[.001,1.728]],1.08,16),'skin','root'],
+ var D=[['eyes',mg([sph(.014,-.037,1.625,.093,1,1.25,.6,8,6),sph(.014,.037,1.625,.093,1,1.25,.6,8,6)]),'eyes','root'],['brows',mg([bx(.04,.009,.012,-.037,1.655,.095),bx(.04,.009,.012,.037,1.655,.095)]),'hair','root',function(o){return o.hs!=='bald'}],
+  ['ears',mg([sph(.022,-.104,1.61,0,.55,1,.85,8,6),sph(.022,.104,1.61,0,.55,1,.85,8,6)]),'skin','root'],['nose',sph(.016,0,1.6,.1,1,1.1,.9,8,6),'skin','root'],['head',lt([[.001,1.487],[.05,1.5],[.078,1.53],[.098,1.575],[.104,1.62],[.098,1.665],[.078,1.7],[.045,1.722],[.001,1.728]],1.08,16),'skin','root'],
   ['hshort',HAIRS.short,'hair','root',function(o){return o.hs==='short'&&o.hat<0}],['hlong',HAIRS.long,'hair','root',function(o){return o.hs==='long'}],['hpony',HAIRS.pony,'hair','root',function(o){return o.hs==='pony'}],
   ['hbun',HAIRS.bun,'hair','root',function(o){return o.hs==='bun'&&o.hat<0}],['hcurly',HAIRS.curly,'hair','root',function(o){return o.hs==='curly'&&o.hat<0}],
   ['beard',sph(.088,0,1.545,.035,1,.75,.8),'beard','root',function(o){return o.beard>=0}],['glasses',mg([bx(.18,.012,.012,0,1.62,.106),bx(.05,.035,.012,-.036,1.615,.108),bx(.05,.035,.012,.036,1.615,.108)]),'glasses','root',function(o){return o.glasses>=0}],
@@ -1194,10 +1194,10 @@ function buildBodies(){var n=PPL.length;
   ['bag',bx(.25,.3,.12,0,1.24,-.15),'bag','root',function(o){return o.bag>=0}],['purse',mg([bx(.16,.13,.06,.21,1.0,0),bx(.012,.3,.012,.19,1.18,0)]),'purse','root',function(o){return o.purse>=0}],
   ['stroller',mg([bx(.5,.35,.75,0,.55,.95),sph(.27,0,.82,1.12,1,.85,.9),bx(.04,.6,.04,-.2,.75,.55),bx(.04,.6,.04,.2,.75,.55),bx(.44,.04,.04,0,1.02,.5),wh(.09,-.24,.09,.68),wh(.09,.24,.09,.68),wh(.1,-.24,.1,1.25),wh(.1,.24,.1,1.25)]),'strollerC','root',function(o,p){return p.stroller}],
   ['scooter',mg([bx(.16,.05,.75,0,.1,.1),cy(.022,.022,1,0,.6,.42),bx(.42,.03,.03,0,1.1,.42),wh(.08,0,.08,.45),wh(.08,0,.08,-.25)]),'scootC','root',function(o,p){return p.scoot}],
-  ['hipJ',sph(.08,0,0,0,1,1,1,10,8),'bottom','thigh'],['thigh',cy(.082,.058,.44,0,-.22,0,1,8),'legs','thigh'],['shorts',cy(.085,.078,.26,0,-.13,0,1,6),'bottom','thigh',function(o){return o.shorts}],
-  ['knee',sph(.059,0,0,0,1,1,1,8,6),'legs','shin'],['shin',cy(.058,.043,.42,0,-.21,0,1,8),'legs','shin'],['shoe',mg([bx(.09,.07,.17,0,-.44,.035),sph(.045,0,-.445,.11,1,.75,1,8,6)]),'shoes','shin'],
-  ['shoulder',sph(.056,0,0,0,1,.85,1,10,8),'top','uarm'],['uarm',cy(.05,.043,.29,0,-.145,0,1,8),'arms','uarm'],['sleeve',cy(.06,.056,.17,0,-.085,0,1,6),'top','uarm',function(o){return o.sleeve}],
-  ['elbow',sph(.044,0,0,0,1,1,1,8,6),'farmC','farm'],['farm',cy(.042,.034,.27,0,-.135,0,1,8),'farmC','farm'],['hand',sph(.042,0,-.3,0,.9,1.25,.7,8,6),'skin','farm'],
+  ['hipJ',sph(.08,0,0,0,1,1,1,10,8),'bottom','thigh'],['thigh',lt([[.001,.03],[.06,.022],[.082,0],[.084,-.07],[.077,-.2],[.064,-.35],[.058,-.44],[.05,-.462],[.001,-.47]],1,12),'legs','thigh'],['knee',sph(.057,0,0,0,1,1,1,10,8),'legs','shin'],['shorts',lt([[.089,.01],[.092,-.12],[.086,-.26]],1,12),'bottom','thigh',function(o){return o.shorts}],
+  ['shin',lt([[.001,.025],[.05,.018],[.058,0],[.062,-.1],[.058,-.18],[.046,-.3],[.04,-.4],[.02,-.425],[.001,-.43]],1,12),'legs','shin'],['shoe',mg([sph(.05,0,-.438,.04,1,.62,1.95,12,8),bx(.092,.018,.2,0,-.465,.04)]),'shoes','shin'],
+  ['shoulder',sph(.054,0,-.01,0,1.05,.8,1,10,8),'top','uarm'],['uarm',lt([[.001,.035],[.04,.025],[.052,0],[.051,-.08],[.045,-.2],[.042,-.29],[.035,-.306],[.001,-.315]],1,12),'arms','uarm'],['elbow',sph(.042,0,0,0,1,1,1,10,8),'farmC','farm'],['sleeve',lt([[.058,.03],[.061,-.06],[.057,-.17]],1,12),'top','uarm',function(o){return o.sleeve}],
+  ['farm',lt([[.001,.025],[.036,.018],[.043,0],[.042,-.08],[.035,-.22],[.03,-.27],[.001,-.285]],1,12),'farmC','farm'],['hand',sph(.04,0,-.315,0,.85,1.3,.65,10,8),'skin','farm'],
   ['phone',bx(.07,.13,.012,0,-.32,.05),'phoneC','farmR',function(o){return o.phone}],['shopbag',mg([bx(.24,.28,.1,0,-.55,0),bx(.01,.12,.01,0,-.36,0)]),'shop','farmL',function(o){return o.shop>=0}]];
  PM=[];D.forEach(function(d){var seg=d[3],cnt=(seg==='thigh'||seg==='shin'||seg==='uarm'||seg==='farm')?n*2:n,im=new THREE.InstancedMesh(d[1],/^(head|face|hand|neck)$/.test(d[0])?M.skinMat:/^(glasses|phone)$/.test(d[0])?M.carGlass:M.cloth,cnt);
   im.castShadow=/^(torsoM|torsoF|thigh|shin|head|skirt|stroller|uarm)$/.test(d[0]);im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
