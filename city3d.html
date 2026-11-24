@@ -880,6 +880,8 @@ function makeGround(){var A=CSTYLE==='hills'?[3.5,7]:CSTYLE==='suburb'?[1.8,4]:[
  PONDS.forEach(function(p){applyFlat({x:p.x,z:p.z,r:p.r+2,k0:2,k1:30})})}
 // ground under open land (rolling ground plus the small hills), and the walkable surface (a lot's pad inside a built lot)
 function HB(x,z){return GZ(x,z)+H0(x,z)}
+function cityGround(x,z){var hb=HB(x,z),p=padAt(x,z);return p?Math.min(p.y,hb):hb}
+function underCity(x,z){var m=1e9;for(var dz=-8;dz<=8;dz+=4)for(var dx=-8;dx<=8;dx+=4)m=Math.min(m,cityGround(x+dx,z+dz),GZ(x+dx,z+dz));return m-1.2}
 function padAt(x,z){if(!PADIX)return null;var k=ci(x,z);if(k<0)return null;var L=PADIX[k];if(!L)return null;
  for(var i=0;i<L.length;i++){var p=PADS[L[i]],c=Math.cos(p.yaw),s=Math.sin(p.yaw),dx=x-p.x,dz=z-p.z,u=dx*c-dz*s,v=dx*s+dz*c;if(Math.abs(u)<=p.w/2&&Math.abs(v)<=p.d/2)return p}return null}
 function H(x,z){var p=padAt(x,z);return p?p.y:HB(x,z)}
@@ -986,7 +988,7 @@ function buildRegion(cty){FLAT=[];OHILLS=[];SHOPCARS=[];var half=HALF,south=cty.
  var seg=250,geo=new THREE.PlaneGeometry(OUT*2,OUT*2,seg,seg);geo.rotateX(-Math.PI/2);var pos=geo.attributes.position,col=new Float32Array(pos.count*3),tc=new THREE.Color();
  var PAL=south?[0xd8c48e,0xcdb98a,0xbfae7f,0xa9b46e,0xe0cf9c]:north?[0x8fb35c,0xa9c27b,0x7da650,0xc9bd78,0x9fc06a]:[0xb7c27a,0xd6c776,0x9fc06a,0xb49a69,0xa9c27b];
  var scrub=new THREE.Color(south?0xc2ad7c:0x9a9a62),forestF=new THREE.Color(0x5d7a42),verge=new THREE.Color(south?0xcbb889:0xb5ad7d);
- for(var v=0;v<pos.count;v++){var wx=pos.getX(v),wz=pos.getZ(v),inB=Math.abs(wx)<half+.5&&Math.abs(wz)<half+.5,hh=H(wx,wz);pos.setY(v,inB?hh-.6:hh);
+ for(var v=0;v<pos.count;v++){var wx=pos.getX(v),wz=pos.getZ(v),inB=Math.abs(wx)<half+.5&&Math.abs(wz)<half+.5,hh=inB?underCity(wx,wz):H(wx,wz);pos.setY(v,hh);
    tc.setHex(PAL[hsh(Math.floor(wx/42)+40,Math.floor(wz/30)+40)%PAL.length]);
    if(hh>6)tc.lerp(scrub,Math.min(1,(hh-6)/10));if(wx>xS-140&&wx<xS-10&&wz<-half-50)tc.lerp(forestF,.75);if(roadDist(wx,wz)<7)tc.lerp(verge,.5);
    var n=(Math.random()-.5)*.035;col[v*3]=tc.r+n;col[v*3+1]=tc.g+n;col[v*3+2]=tc.b+n}
