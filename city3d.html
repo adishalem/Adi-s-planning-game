@@ -776,7 +776,12 @@ function addShrub(x,z,s){shrubs.push([x,0,z,s||1,Math.random()])}
 function makeMasks2(){VGRID=new Uint8Array(GN*GN);VACANT.forEach(function(p){rectCells(p.x,p.z,p.yaw,p.w,p.d,function(k){if(k>=0)VGRID[k]=1})});
  var m=new Float32Array(GN*GN);for(var k=0;k<GN*GN;k++){var v=RAST0[k],rv=RAST[k],t=v>=0?REG[v].type:null;
   if(rv===-2||rv===-3)m[k]=0;else if(VGRID[k])m[k]=1;else if(v===-1||v===-5||t==='green')m[k]=1;else if(v>=0&&!OCC[k])m[k]=.8;else m[k]=0}
- MASKF=blur(m,GN,1,2);HILLS.forEach(function(h){h[3]*=1.5})}
+ m=blur(m,GN,1,2);
+ // distance (in cells) to the nearest road and to the nearest built lot: hills fade out before them, so the ground never rises over a road or into a building
+ function dist(src){var d=new Float32Array(GN*GN).fill(1e9),q=[];for(var k=0;k<GN*GN;k++)if(src(k)){d[k]=0;q.push(k)}for(var i=0;i<q.length;i++){var c=q[i],x=c%GN,z=Math.floor(c/GN);[[1,0],[-1,0],[0,1],[0,-1]].forEach(function(o){var X=x+o[0],Z=z+o[1];if(X<0||Z<0||X>=GN||Z>=GN)return;var n=Z*GN+X;if(d[n]>d[c]+1){d[n]=d[c]+1;q.push(n)}})}return d}
+ var dr=dist(function(k){return RAST[k]===-2||RAST[k]===-3}),db=dist(function(k){return OCC[k]&&!VGRID[k]});
+ for(var k2=0;k2<GN*GN;k2++)m[k2]*=sst((dr[k2]-1.5)/4)*sst((db[k2]-.5)/2.5);
+ MASKF=m;HILLS.forEach(function(h){h[3]*=1.5})}
 function rectPts(p,step,inset){var out=[],c=Math.cos(p.yaw),s=Math.sin(p.yaw);for(var u=-p.w/2+inset;u<=p.w/2-inset;u+=step)for(var v=-p.d/2+inset;v<=p.d/2-inset;v+=step)out.push([p.x+u*c+v*s,p.z-u*s+v*c]);return out}
 function decorateVacant(){VACANT.forEach(function(p){var pts=rectPts(p,3,2.5);
   pts.forEach(function(q){if(Math.random()<.22)addShrub(q[0]+(Math.random()-.5)*2,q[1]+(Math.random()-.5)*2,.6+Math.random()*.7)});
