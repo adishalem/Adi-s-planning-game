@@ -27,6 +27,7 @@ body{margin:0;background:var(--sky);color:var(--ink);font-family:var(--f-body);d
 .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
 .btn:hover{color:#fff;border-color:#fff}.btn.pri:hover{color:var(--accent-ink);filter:brightness(1.08)}
 .btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend{display:grid;gap:4px;font-size:.76rem;border:1px solid var(--line);border-radius:10px;padding:8px 10px}.legend b{font-family:var(--f-display);font-weight:400;font-size:.92rem;color:var(--accent)}.legend span{display:flex;align-items:center;gap:8px}.legend i{width:14px;height:10px;border-radius:2px;flex:none;border:1px solid rgba(0,0,0,.35)}.legend i.blue{height:0;border:0;border-top:2px dashed #4f8dff}
 .help{margin:0;font-size:.74rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:8px}
 #err{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.85rem;margin:0}
 @media (max-width:600px){.hud{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:10px 12px;gap:7px;max-height:46vh}.sub,.help{display:none}.hud h1{font-size:1.15rem}}
@@ -38,7 +39,8 @@ body{margin:0;background:var(--sky);color:var(--ink);font-family:var(--f-body);d
   <div class="city" id="cityname"><b>עיר</b><small></small></div>
   <div class="clock" aria-live="polite"><b id="clk">06:30</b><span id="phase">העיר מתעוררת</span></div>
   <div class="row"><div class="seg" role="group" aria-label="תאורה"><button type="button" id="t-day" aria-pressed="true">יום</button><button type="button" id="t-dusk" aria-pressed="false">שקיעה</button><button type="button" id="t-night" aria-pressed="false">לילה</button></div></div>
-  <div class="row"><button type="button" class="btn" id="street">מבט רחוב</button></div>
+  <div class="row"><button type="button" class="btn" id="street">מבט רחוב</button><button type="button" class="btn" id="taba" aria-pressed="false">תב"ע</button></div>
+  <div class="legend" id="taba-legend" hidden></div>
   <div class="row"><button type="button" class="btn pri" id="regen">עיר חדשה</button><button type="button" class="btn" id="region">האזור</button><button type="button" class="btn" id="spin" aria-pressed="false">סיבוב</button><button type="button" class="btn" id="fast" aria-pressed="false">זמן מהיר</button></div>
   <p class="help">גרירה: סיבוב והטיה. גלגלת או צביטה: זום. כפתור ימני, שתי אצבעות או החצים במקלדת: הזזה.</p>
 </div>
@@ -563,7 +565,7 @@ var FALLBACK={newT:[[22,18,'modern']],newPlan:[[20,18,'modern'],[17,16,'bauhaus'
 var RESID={shikun:1,villa:1,garden:1,newT:1,newPlan:1,center:1,gov:1,tour:1};
 function slotsAlong(st,off,sp){var out=[],L=st.cum[st.cum.length-1];for(var s=sp/2;s<L-sp/3;s+=sp){var p=pAt(st.pts,st.cum,s),t=tanAt(st.pts,p[2]);[1,-1].forEach(function(sd){out.push({s:s,sd:sd,p:p,t:t,st:st})})}return out}
 var PLACED={};function tryPlace(sl,w,d,off,kind,rid,marg){PLACED.try=(PLACED.try||0)+1;var nx=-sl.t[1]*sl.sd,nz=sl.t[0]*sl.sd,cx=sl.p[0]+nx*(off+d/2),cz=sl.p[1]+nz*(off+d/2),yaw=Math.atan2(-nx,-nz);
- if(!fits(cx,cz,yaw,w,d,rid,marg))return null;occupy(cx,cz,yaw,w,d);build1(kind,cx,cz,yaw);PLACED[kind]=(PLACED[kind]||0)+1;return {cx:cx,cz:cz,door:[sl.p[0]+nx*(sl.st.half+.9),sl.p[1]+nz*(sl.st.half+.9)],st:sl.st,s:sl.s,sd:sl.sd,gate:[cx-nx*(d/2-1),cz-nz*(d/2-1)]}}
+ if(!fits(cx,cz,yaw,w,d,rid,marg))return null;occupy(cx,cz,yaw,w,d);build1(kind,cx,cz,yaw);parcel(kind,cx,cz,yaw,w,d);PLACED[kind]=(PLACED[kind]||0)+1;return {cx:cx,cz:cz,door:[sl.p[0]+nx*(sl.st.half+.9),sl.p[1]+nz*(sl.st.half+.9)],st:sl.st,s:sl.s,sd:sl.sd,gate:[cx-nx*(d/2-1),cz-nz*(d/2-1)]}}
 function placeBuildings(){OCC=new Uint8Array(GN*GN);HOMES=[];SCHOOLS=[];BLDS=[];
  STREETS.forEach(function(st){var r=Math.ceil((st.half+.6)/CELLM)+1;densify(st.pts,2).forEach(function(p){var c0=ci(p[0],p[1]);if(c0<0)return;var cx=c0%GN,cz=Math.floor(c0/GN);for(var dz=-r;dz<=r;dz++)for(var dx=-r;dx<=r;dx++){var x=cx+dx,z=cz+dz;if(x<0||z<0||x>=GN||z>=GN)continue;var w=cellXZ(z*GN+x);if(Math.hypot(w[0]-p[0],w[1]-p[1])<=st.half+.6)OCC[z*GN+x]=1}})});placeReserved();DEAD.forEach(function(d){occupy(d.cx,d.cz,d.yaw,d.w+2,d.d+2)});
  // civic core: city hall, the government tower and the mall in the centre
@@ -580,7 +582,7 @@ function placeBuildings(){OCC=new Uint8Array(GN*GN);HOMES=[];SCHOOLS=[];BLDS=[];
  ROADS.forEach(function(rd){if(rd.kind==='hwy')return;pieces(rd.pts,rd.cum,function(p){return !inCity(p[0],p[1])}).forEach(function(pc){var ps={pts:pc,cum:plen(pc),half:rd.half};slotsAlong(ps,0,19).forEach(function(sl){if(Math.random()<.35)return;var nx=-sl.t[1]*sl.sd,nz=sl.t[0]*sl.sd,off=rd.corr+9.5,k=ci(sl.p[0]+nx*off,sl.p[1]+nz*off),rid=k>=0?RAST0[k]:-1;if(rid<0)return;var ty=REG[rid].type;if(!/^(center|gov|shikun|newPlan|newT|emp)$/.test(ty))return;tryPlace(sl,16,15,rd.corr+4.5,ty==='emp'?'office':'comm',rid,1.5)})})});
  var FILL={shikun:[[26,20,'shikun'],[28,22,'shikunPil'],[26,20,'shikun'],[22,18,'shikun3']],newT:[[44,32,'vatTwin'],[34,30,'vat']],newPlan:[[34,30,'vat'],[26,24,'modern']],center:[[17,16,'bauhaus']],gov:[[26,24,'modern']]};
  REG.forEach(function(r){var kinds=FILL[r.type];if(!kinds||r.area<8000)return;var cap=Math.round(r.area/(r.type==='shikun'?700:2200)),n=0,rows=r.type==='shikun',cells,nLat=0;if(rows){cells=[];var cu=Math.cos(r.th),su2=Math.sin(r.th);for(var a=-22;a<=22;a++)for(var b=-24;b<=24;b++){var jx=(Math.random()-.5)*12,jz=(Math.random()-.5)*10,x=r.cx+cu*(a*34+jx+(b%2)*17)-su2*(b*30+jz),z=r.cz+su2*(a*34+jx+(b%2)*17)+cu*(b*30+jz),k=ci(x,z);if(k>=0&&RAST0[k]===r.id)cells.push(k)}nLat=cells.length;cells=cells.concat(r.cells.filter(function(c,i){return i%2===0}).sort(function(){return Math.random()-.5}))}else cells=r.cells.filter(function(c,i){return i%2===0}).sort(function(){return Math.random()-.5});
-  for(var i=0;i<cells.length&&n<cap;i++){var lat=rows&&i<nLat,w=cellXZ(cells[i]),yaw=lat?-r.th+(Math.random()<.35?Math.PI/2:0)+(Math.random()-.5)*.24:-r.th+(Math.random()<.5?0:Math.PI/2)+(CSTYLE==='grid'?0:(Math.random()-.5)*.3);for(var k=0;k<kinds.length;k++){var o=kinds[k];if(!fits(w[0],w[1],yaw,o[0],o[1],r.id,rows?3:2))continue;occupy(w[0],w[1],yaw,o[0],o[1]);build1(o[2],w[0],w[1],yaw);PLACED[o[2]]=(PLACED[o[2]]||0)+1;n++;var at=attachStreet(w[0],w[1],r.id);if(at)HOMES.push({cx:w[0],cz:w[1],door:at.door,st:at.st,sd:at.sd,rid:r.id,gate:[w[0],w[1]]});break}}});
+  for(var i=0;i<cells.length&&n<cap;i++){var lat=rows&&i<nLat,w=cellXZ(cells[i]),yaw=lat?-r.th+(Math.random()<.35?Math.PI/2:0)+(Math.random()-.5)*.24:-r.th+(Math.random()<.5?0:Math.PI/2)+(CSTYLE==='grid'?0:(Math.random()-.5)*.3);for(var k=0;k<kinds.length;k++){var o=kinds[k];if(!fits(w[0],w[1],yaw,o[0],o[1],r.id,rows?3:2))continue;occupy(w[0],w[1],yaw,o[0],o[1]);build1(o[2],w[0],w[1],yaw);parcel(o[2],w[0],w[1],yaw,o[0],o[1]);PLACED[o[2]]=(PLACED[o[2]]||0)+1;n++;var at=attachStreet(w[0],w[1],r.id);if(at)HOMES.push({cx:w[0],cz:w[1],door:at.door,st:at.st,sd:at.sd,rid:r.id,gate:[w[0],w[1]]});break}}});
  // green land: groves, a pond in the wadi, playgrounds
  REG.forEach(function(r){if(r.type!=='green')return;for(var i=0;i<r.cells.length;i+=9){var w=cellXZ(r.cells[i]);if(Math.random()<.35)addTree(w[0]+(Math.random()-.5)*3,w[1]+(Math.random()-.5)*3,.9+Math.random()*.5,Math.random()<.3?'pine':null)}});
  for(var k=0;k<GN*GN;k+=5){if(RAST0[k]!==-5)continue;var w2=cellXZ(k);if(Math.random()<.3)addTree(w2[0],w2[1],.9+Math.random()*.6,Math.random()<.4?'pine':Math.random()<.3?'olive':null)}
@@ -689,7 +691,7 @@ function reserveLots(){var special=false;REG.forEach(function(r){r.res=[];var li
    var cand=r.cells.filter(function(c,i){return i%3===0}).map(function(c){var w=cellXZ(c);return [w[0],w[1],Math.hypot(w[0]-target[0],w[1]-target[1])+(it[3]==='any'?Math.random()*120:0)]}).sort(function(a,b){return a[2]-b[2]});
    for(var i=0;i<cand.length&&i<400;i++){var ok=null;[-r.th,-r.th+Math.PI/2,-r.th+Math.PI,-r.th-Math.PI/2].some(function(yaw){if(rectCells(cand[i][0],cand[i][1],yaw,it[1]+8,it[2]+8,function(k){return k>=0&&RAST[k]===r.id}))ok=yaw;return ok!==null});
     if(ok!==null){rectCells(cand[i][0],cand[i][1],ok,it[1]+2,it[2]+2,function(k){if(k>=0)RAST[k]=-6});r.res.push({kind:kind,cx:cand[i][0],cz:cand[i][1],yaw:ok,w:it[1],d:it[2]});break}}})})}
-function placeReserved(){REG.forEach(function(r){(r.res||[]).forEach(function(q){occupy(q.cx,q.cz,q.yaw,q.w,q.d);build1(q.kind,q.cx,q.cz,q.yaw);PLACED[q.kind]=(PLACED[q.kind]||0)+1;
+function placeReserved(){REG.forEach(function(r){(r.res||[]).forEach(function(q){occupy(q.cx,q.cz,q.yaw,q.w,q.d);build1(q.kind,q.cx,q.cz,q.yaw);parcel(q.kind,q.cx,q.cz,q.yaw,q.w,q.d);PLACED[q.kind]=(PLACED[q.kind]||0)+1;
   if(/^(schoolBig|schoolSmall|special|ganYaar)$/.test(q.kind)){var o=attachStreet(q.cx,q.cz,r.id);if(o)SCHOOLS.push({cx:q.cx,cz:q.cz,rid:r.id,gan:q.kind==='ganYaar',st:o.st,sd:o.sd,door:o.door,gate:[q.cx,q.cz]})}})})}
 function attachStreet(x,z,rid){var best=null,bd=1e18;STREETS.forEach(function(st){if(st.rid!==rid)return;for(var i=0;i<st.pts.length;i+=2){var d=(st.pts[i][0]-x)*(st.pts[i][0]-x)+(st.pts[i][1]-z)*(st.pts[i][1]-z);if(d<bd){bd=d;best={st:st,i:i}}}});if(!best)return null;
  var t=tanAt(best.st.pts,best.i),p=best.st.pts[best.i],sd=((x-p[0])*-t[1]+(z-p[1])*t[0])>0?1:-1,sw=sidewalkOf(best.st,sd);return {st:best.st,sd:sd,door:sw[Math.min(best.i,sw.length-1)]}}
@@ -706,7 +708,7 @@ function deadEnds(){DEAD=[];STREETS.forEach(function(st){[0,1].forEach(function(
   if(ok){inLot(cx,cz,yaw,1,function(){var lt=lotTex.clone();lt.needsUpdate=true;lt.wrapS=lt.wrapT=THREE.RepeatWrapping;lt.repeat.set(1.2,1);plane(W,D,new THREE.MeshStandardMaterial({map:lt,roughness:.9}),0,.08,0);foot(W,D,0,0);
      [[-1,1],[1,1],[-1,-1],[1,-1]].forEach(function(o){box(.25,.18,D,M.roofFlat,o[0]*W/2,0,0)});box(W,.18,.25,M.roofFlat,0,0,-D/2);
      for(var i=0;i<5;i++)if(Math.random()<.7)parked.push([-W/2+2.2+i*3.4,0,-D/2+3,Math.PI/2]);for(var j=0;j<5;j++)if(Math.random()<.5)parked.push([-W/2+2.2+j*3.4,0,D/2-3.2,-Math.PI/2]);
-     addTree(-W/2-1.5,-D/2+1,.9);addTree(W/2+1.5,-D/2+1,.9)});DEAD.push({cx:cx,cz:cz,yaw:yaw,w:W,d:D})}
+     addTree(-W/2-1.5,-D/2+1,.9);addTree(W/2+1.5,-D/2+1,.9)});DEAD.push({cx:cx,cz:cz,yaw:yaw,w:W,d:D});parcel('parking',cx,cz,yaw,W,D)}
   else{var c2=new THREE.Mesh(new THREE.CircleGeometry(8,28),roadMats().asph);c2.rotation.x=-Math.PI/2;c2.position.set(p[0]+dx*4,.084,p[1]+dz*4);addRaw(c2);DEAD.push({cx:p[0]+dx*4,cz:p[1]+dz*4,yaw:yaw,w:16,d:16,circle:1})}})})}
 // the pond sits in the wadi where no footpath crosses it
 function placePond(){PONDS=[];if(!WADI)return;var R=9,best=null;for(var i=Math.floor(WADI.length*.5);i<WADI.length&&!best;i++){var x=WADI[i][0],z=WADI[i][1],k=ci(x,z);if(k>=0&&RAST0[k]===-5&&inCity(x,z)&&rectCells(x,z,0,2*R+16,2*R+16,function(c){return c<0||(RAST0[c]!==-2&&RAST0[c]!==-6)}))best=[x,z]}
@@ -724,6 +726,37 @@ function cleanTrees(){var C2=2,NN=Math.ceil(2*HALF/C2),HARD=new Uint8Array(NN*NN
  var removed=0;[trees,palms,olives,pines].forEach(function(arr){for(var i=arr.length-1;i>=0;i--){var t=arr[i];if(Math.abs(t[0])>=HALF||Math.abs(t[2])>=HALF)continue;var gi=Math.floor((t[0]+HALF)/C2),gj=Math.floor((t[2]+HALF)/C2);if(HARD[gj*NN+gi]){arr.splice(i,1);removed++}}});
  return removed}
 
+// =================== zoning plan (תב"ע) generated from the lots the city actually built ===================
+// Colours follow the spirit of the Israeli plan standard (מבא"ת): housing in yellows and oranges by density, public buildings brown,
+// open space green, commerce lilac, employment and industry purple, roads red, the plan boundary a blue line.
+var PARCELS=[],TABA=null,TABA_ON=false;
+var ZN={a:['מגורים א׳ (צמודי קרקע)','#f7e47c'],b:['מגורים ב׳ (עד 4 קומות)','#f4bb5f'],c:['מגורים ג׳ (5 עד 8 קומות)','#ec9440'],d:['מגורים ד׳ (9 קומות ומעלה)','#d8702c'],mix:['מגורים ומסחר','#e6b29a'],
+ com:['מסחר','#c9a3d6'],emp:['תעסוקה','#a587d1'],ind:['תעשייה','#8a5fbf'],tour:['תיירות ומלונאות','#f0a8c4'],pub:['מבנים ומוסדות ציבור','#a9713f'],open:['שטח ציבורי פתוח','#7cc46a'],sport:['ספורט ונופש','#3f9f55'],park:['חניה ציבורית','#b8b8b8'],road:['דרך','#e2564f']};
+var KZ={villa:'a',garden:'b',bauhaus:'b',shikun:'b',shikun3:'b',shikunPil:'b',shikunTrain:'b',shikunL:'b',modern:'c',vat:'d',vatTwin:'d',tower:'d',comm:'mix',cafe:'mix',oldCenter:'com',super:'com',mallLot:'com',big:'com',
+ office:'emp',factory:'ind',warehouse:'ind',hotel:'tour',schoolBig:'pub',schoolSmall:'pub',special:'pub',gan:'pub',ganYaar:'pub',hall:'pub',gov:'pub',park:'open',play:'open',sports:'sport',parking:'park'};
+var RZN={villa:'a',garden:'b',shikun:'b',newPlan:'c',newT:'d',center:'mix',gov:'mix',ind:'ind',emp:'emp',tour:'tour',green:'open'};
+function parcel(kind,x,z,yaw,w,d){PARCELS.push({kind:kind,x:x,z:z,yaw:yaw,w:w,d:d})}
+function makeTaba(){if(TABA){S.remove(TABA);TABA.material.map.dispose();TABA.geometry.dispose();TABA=null}
+ var N2=2048,K=N2/(2*HALF),cv=document.createElement('canvas');cv.width=cv.height=N2;var g=cv.getContext('2d'),used={};var X=function(x){return (x+HALF)*K},Z=function(z){return (z+HALF)*K};
+ // every neighbourhood carries its base designation; lawns between buildings belong to it
+ for(var k=0;k<GN*GN;k++){var v=RAST0[k],zn=v>=0?RZN[REG[v].type]:v===-5?'open':null;if(!zn)continue;used[zn]=1;var w=cellXZ(k);g.fillStyle=ZN[zn][1];g.fillRect(X(w[0]-CELLM/2),Z(w[1]-CELLM/2),CELLM*K+1,CELLM*K+1)}
+ // each lot with its own use and a lot line
+ PARCELS.forEach(function(p){var zn=KZ[p.kind];if(!zn)return;used[zn]=1;var c=Math.cos(p.yaw),s=Math.sin(p.yaw);g.beginPath();[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(o,i){var u=o[0]*p.w/2,vv=o[1]*p.d/2,x=p.x+u*c+vv*s,z=p.z-u*s+vv*c;i?g.lineTo(X(x),Z(z)):g.moveTo(X(x),Z(z))});g.closePath();g.fillStyle=ZN[zn][1];g.fill();g.lineWidth=1.4;g.strokeStyle='rgba(25,25,25,.8)';g.stroke()});
+ // roads over everything
+ used.road=1;g.lineCap='round';g.lineJoin='round';g.strokeStyle=ZN.road[1];
+ ROADS.forEach(function(r){g.lineWidth=(r.half+r.sw)*2*K;g.beginPath();r.pts.forEach(function(p,i){i?g.lineTo(X(p[0]),Z(p[1])):g.moveTo(X(p[0]),Z(p[1]))});g.stroke()});
+ STREETS.forEach(function(st){g.lineWidth=(st.half+1.8)*2*K;g.beginPath();st.pts.forEach(function(p,i){i?g.lineTo(X(p[0]),Z(p[1])):g.moveTo(X(p[0]),Z(p[1]))});g.stroke()});
+ JUNC.forEach(function(J){var A=ROADS[J.a],B=ROADS[J.b],R=J.type==='round'?(J.ri||8)+7.5:Math.max(A.half,B.half)+3;g.fillStyle=ZN.road[1];g.beginPath();g.arc(X(J.x),Z(J.z),R*K,0,6.283);g.fill();if(J.type==='round'&&J.ri){g.fillStyle=ZN.open[1];g.beginPath();g.arc(X(J.x),Z(J.z),J.ri*K,0,6.283);g.fill()}});
+ // the plan boundary
+ g.strokeStyle='#1f5fd6';g.lineWidth=4;g.setLineDash([18,10]);g.beginPath();for(var a=0;a<=360;a++){var t=a/180*Math.PI,rr=boundaryR(t),bx=CENTER[0]+Math.cos(t)*rr,bz=CENTER[1]+Math.sin(t)*rr;a?g.lineTo(X(bx),Z(bz)):g.moveTo(X(bx),Z(bz))}g.stroke();g.setLineDash([]);
+ var tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=Math.min(8,R.capabilities.getMaxAnisotropy());
+ TABA=new THREE.Mesh(new THREE.PlaneGeometry(2*HALF,2*HALF),new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.93,depthTest:false,depthWrite:false}));TABA.rotation.x=-Math.PI/2;TABA.position.y=.6;TABA.renderOrder=5;TABA.visible=TABA_ON;S.add(TABA);
+ // legend lists only the designations that appear in this plan
+ var lg=document.getElementById('taba-legend');lg.innerHTML='';var h=document.createElement('b');h.textContent='תב"ע שנגזרה מהעיר';lg.appendChild(h);
+ Object.keys(ZN).forEach(function(z){if(!used[z])return;var row=document.createElement('span'),sw=document.createElement('i');sw.style.background=ZN[z][1];row.appendChild(sw);row.appendChild(document.createTextNode(ZN[z][0]));lg.appendChild(row)});
+ var bl=document.createElement('span'),bi=document.createElement('i');bi.className='blue';bl.appendChild(bi);bl.appendChild(document.createTextNode('גבול התוכנית (הקו הכחול)'));lg.appendChild(bl)}
+function setTaba(on){TABA_ON=on;if(TABA)TABA.visible=on;document.getElementById('taba-legend').hidden=!on;document.getElementById('taba').setAttribute('aria-pressed',String(on));if(on)flyTo(CENTER[0],CENTER[1],820,.3)}
+
 // ---------- one call builds the whole organic city ----------
 var STYLE_T={grid:'עיר ותיקה וצפופה, בהשראת דרום תל אביב',suburb:'שדרות וכיכרות, בהשראת מיתר',hills:'צירים מעוקלים וואדיות, בהשראת רמת בית שמש'};
 function build(){clearCity();var cty=CITIES[Math.floor(rnd()*CITIES.length)];G=null;WP=[];
@@ -732,7 +765,7 @@ function build(){clearCity();var cty=CITIES[Math.floor(rnd()*CITIES.length)];G=n
  BND=[25+rnd()*30,rnd()*6.28,15+rnd()*20,rnd()*6.28];CENTER=[(rnd()-.5)*40,(rnd()-.5)*40];CITYHALL=null;
  HILLS=[];var nh=10+Math.floor(rnd()*6);for(var i=0;i<nh;i++)HILLS.push([(rnd()-.5)*HALF*1.7,(rnd()-.5)*HALF*1.7,16+rnd()*26,2+rnd()*(CSTYLE==='hills'?6:3)]);
  arterials();rasterize();assignTypes(cty);reserveLots();localStreets();makeMasks();
- PLACED={};FOOTS=[];CURFOOT=null;cityTerrain();drawArterials();placePond();drawStreets();placeBuildings();window.__dbg={REG:REG,STREETS:STREETS,PLACED:PLACED,HOMES:HOMES,SCHOOLS:SCHOOLS,FITS:fits,BLDS:function(){return BLDS},DEAD:function(){return DEAD},PONDS:function(){return PONDS},TREESOUT:function(){return TREESOUT},trees:function(){return trees},FOOTS:function(){return FOOTS},cars:function(){return cars},buses:function(){return buses},pose:function(v){lanePose(v);return [_p.x,_p.y,_p.z]},cell:function(x,z){var k=ci(x,z);return k<0?null:RAST0[k]},occ:function(x,z){var k=ci(x,z);return k<0?0:OCC[k]},inCity:inCity,H:H,JUNC:JUNC,ROADS:ROADS};
+ PLACED={};FOOTS=[];CURFOOT=null;PARCELS=[];cityTerrain();drawArterials();placePond();drawStreets();placeBuildings();makeTaba();window.__dbg={REG:REG,STREETS:STREETS,PLACED:PLACED,HOMES:HOMES,SCHOOLS:SCHOOLS,FITS:fits,BLDS:function(){return BLDS},DEAD:function(){return DEAD},PONDS:function(){return PONDS},TREESOUT:function(){return TREESOUT},trees:function(){return trees},FOOTS:function(){return FOOTS},cars:function(){return cars},buses:function(){return buses},pose:function(v){lanePose(v);return [_p.x,_p.y,_p.z]},cell:function(x,z){var k=ci(x,z);return k<0?null:RAST0[k]},occ:function(x,z){var k=ci(x,z);return k<0?0:OCC[k]},inCity:inCity,H:H,JUNC:JUNC,ROADS:ROADS};
  buildRegion(cty);plantForest();makeVehicles();makeSmoke();makeACs();makePeople();applyTime(TIME);linearize();bake()}
 
 // ---------- the city ----------
@@ -1140,6 +1173,7 @@ function frame(dt,now){if(!reduce){tickClock(dt);moveVehicles(dt);moveSmoke(dt);
 function loop(now){var dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;frame(dt,now);requestAnimationFrame(loop)}
 function setP(id,on){document.getElementById(id).setAttribute('aria-pressed',String(on))}
 document.getElementById('regen').addEventListener('click',build);
+document.getElementById('taba').addEventListener('click',function(){setTaba(!TABA_ON)});
 ['day','dusk','night'].forEach(function(k){document.getElementById('t-'+k).addEventListener('click',function(){applyTime(k)})});
 document.getElementById('spin').addEventListener('click',function(){ctl.autoRotate=!ctl.autoRotate;ctl.autoRotateSpeed=.6;setP('spin',ctl.autoRotate)});
 document.getElementById('region').addEventListener('click',function(){flyTo(0,0,1450,.95)});
