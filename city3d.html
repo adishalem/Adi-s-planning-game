@@ -1330,6 +1330,77 @@ document.getElementById('spin').addEventListener('click',function(){ctl.autoRota
 document.getElementById('region').addEventListener('click',function(){flyTo(0,0,1450,.95)});
 document.getElementById('fast').addEventListener('click',function(){SPEED=SPEED===1.5?6:1.5;setP('fast',SPEED>1.5)});
 document.getElementById('street').addEventListener('click',function(){var u=CITYHALL||CENTER;flyTo(u[0]+8,u[1]+8,70,1.1)});
+// =================== continuous bodies: the people nearest the camera get one smooth body that bends at hips, knees, shoulders and elbows ===================
+// Built entirely in code. One shared body shape per sex; each person gets its own colours (clothes, skin, hair) and its own skeleton.
+var SK={geo:{},pool:{M:[],F:[]},bound:[],timer:0,group:new THREE.Group(),mat:null,acc:null},MAXSK=110,SKR=130;S.add(SK.group);
+function skBuild(){if(SK.mat)return;SK.mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.78,skinning:true});
+ var lt=function(pr,zs,sg){var g=new THREE.LatheGeometry(pr.map(function(q){return new THREE.Vector2(q[0],q[1])}),sg||16);g.scale(1,1,zs||1);return g};
+ var cl=function(v){return Math.max(0,Math.min(1,v))};
+ var TM=[[.05,.97],[.132,.985],[.137,1.03],[.135,1.1],[.157,1.2],[.177,1.3],[.188,1.37],[.18,1.415],[.135,1.455],[.06,1.482],[.001,1.49]],TF=[[.05,.97],[.137,.985],[.132,1.04],[.117,1.11],[.142,1.22],[.16,1.3],[.165,1.37],[.155,1.415],[.112,1.452],[.05,1.478],[.001,1.486]];
+ // bones: 0 root, 1 thigh L, 2 shin L, 3 thigh R, 4 shin R, 5 upper arm L, 6 forearm L, 7 upper arm R, 8 forearm R
+ function body(fem){var P=[],N=[],C=[],SI=[],SW=[];
+  function add(g,pid,wf,tx){g=g.index?g.toNonIndexed():g;var p=g.attributes.position,n=g.attributes.normal;for(var i=0;i<p.count;i++){var x=p.getX(i)+(tx||0),y=p.getY(i),z=p.getZ(i);P.push(x,y,z);N.push(n.getX(i),n.getY(i),n.getZ(i));
+    C.push(typeof pid==='function'?pid(y):pid);var w=wf?wf(y):[0,1,0,0];SI.push(w[0],w[2],0,0);SW.push(w[1],w[3],0,0)}}
+  var leg=function(th,sh){return function(y){if(y<.46)return [sh,1,0,0];if(y<.52){var s=(.52-y)/.06;return [sh,s,th,1-s]}var t=cl((.975-y)/.07);return [th,t,0,1-t]}};
+  var arm=function(ua,fa){return function(y){if(y<1.09)return [fa,1,0,0];if(y<1.14){var f=(1.14-y)/.05;return [fa,f,ua,1-f]}var u=cl((1.46-y)/.07);return [ua,u,0,1-u]}};
+  var LEG=[[.001,.045],[.028,.055],[.04,.07],[.043,.12],[.05,.2],[.058,.28],[.062,.36],[.06,.42],[.056,.47],[.055,.5],[.058,.54],[.063,.6],[.069,.68],[.075,.76],[.08,.84],[.083,.9],[.08,.95],[.04,.985],[.001,.99]];
+  var ARM=[[.001,.84],[.028,.845],[.031,.87],[.034,.92],[.039,1.0],[.042,1.07],[.041,1.115],[.043,1.16],[.047,1.25],[.051,1.33],[.054,1.39],[.05,1.43],[.03,1.455],[.001,1.462]];
+  [[-1,1,2,5,6],[1,3,4,7,8]].forEach(function(sd){var x=sd[0];
+   add(lt(LEG,1,14),function(y){return y>.67?4:5},leg(sd[1],sd[2]),x*.085);
+   add(mg([sph(.05,0,.045,.04,1,.62,1.95,12,8),bx(.092,.018,.2,0,.009,.04)]),6,function(){return [sd[2],1,0,0]},x*.085);
+   add(lt(ARM,1,12),function(y){return y>1.235?8:y>1.115?9:10},arm(sd[3],sd[4]),x*.193);
+   add(sph(.04,0,.81,0,.85,1.3,.65,10,8),0,function(){return [sd[4],1,0,0]},x*.193)});
+  add(lt(fem?TF:TM,fem?.64:.62,18),2);
+  add(fem?lt([[.05,.86],[.11,.865],[.148,.9],[.155,.95],[.13,.995]],.74,18):lt([[.05,.86],[.1,.865],[.132,.9],[.14,.95],[.128,.99]],.72,18),3);
+  add(lt([[.046,1.45],[.044,1.5],[.04,1.535]],1,12),0);
+  add(lt([[.001,1.487],[.05,1.5],[.078,1.53],[.098,1.575],[.104,1.62],[.098,1.665],[.078,1.7],[.045,1.722],[.001,1.728]],1.08,18),0);
+  add(mg([sph(.014,-.037,1.625,.093,1,1.25,.6,8,6),sph(.014,.037,1.625,.093,1,1.25,.6,8,6)]),7);
+  add(mg([bx(.04,.009,.012,-.037,1.655,.095),bx(.04,.009,.012,.037,1.655,.095)]),1);
+  add(mg([sph(.022,-.104,1.61,0,.55,1,.85,8,6),sph(.022,.104,1.61,0,.55,1,.85,8,6),sph(.016,0,1.6,.1,1,1.1,.9,8,6)]),0);
+  var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));
+  g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(SI,4));g.setAttribute('skinWeight',new THREE.Float32BufferAttribute(SW,4));g.userData.pid=new Uint8Array(C);return g}
+ SK.geo.M=body(false);SK.geo.F=body(true);
+ function hcap(r,front,side,back,bump){var g=new THREE.SphereGeometry(r,22,16),p=g.attributes.position;for(var i=0;i<p.count;i++){var x=p.getX(i),y=p.getY(i),z=p.getZ(i),zn=z/r,hl=zn>0?side+(front-side)*zn:side+(side-back)*zn,k=y<hl?.84:1;
+   if(bump)k*=1+bump*Math.sin(x*90)*Math.sin(y*90)*Math.sin(z*90);p.setXYZ(i,x*k,y,z*k)}g.translate(0,1.617,-.01);g.computeVertexNormals();return g}
+ SK.acc={hshort:{g:hcap(.117,.05,-.012,-.075)},hlong:{g:mg([hcap(.118,.052,-.085,-.1),sph(.098,0,1.47,-.058,1.02,1.75,.48,12,10)])},hpony:{g:mg([hcap(.117,.052,-.02,-.08),sph(.04,0,1.6,-.118,1,1,1,10,8),sph(.034,0,1.49,-.13,.85,2.4,.85,10,8)])},
+  hbun:{g:mg([hcap(.117,.052,-.02,-.08),sph(.05,0,1.715,-.07,1,.9,1,10,8)])},hcurly:{g:hcap(.126,.045,-.02,-.07,.06)},
+  beard:{g:sph(.088,0,1.545,.03,1,.68,.82)},glasses:{g:mg([bx(.18,.012,.012,0,1.625,.108),bx(.05,.035,.012,-.037,1.62,.11),bx(.05,.035,.012,.037,1.62,.11)])},kippa:{g:cy(.06,.064,.012,0,1.725,-.035)},
+  hat:{g:mg([cy(.12,.125,.075,0,1.715,0),cy(.165,.165,.012,0,1.678,.025)])},helmet:{g:mg([sph(.13,0,1.65,0,1,.85,1.05,12,8),cy(.155,.155,.01,0,1.65,0)])},
+  tie:{g:bx(.042,.3,.02,0,1.3,.105)},vest:{g:lt(TM.slice(2,8).map(function(q){return [q[0]*1.07,q[1]]}),.66,18)},skirt:{g:lt([[.27,.56],[.2,.8],[.155,.96],[.15,1.0]],.8,18)},
+  bag:{g:bx(.25,.3,.12,0,1.24,-.16)},purse:{g:mg([bx(.16,.13,.06,.24,1.0,0),bx(.012,.3,.012,.21,1.18,0)])},phone:{g:bx(.07,.13,.012,0,-.32,.05),b:'farmR'},shopbag:{g:mg([bx(.24,.28,.1,0,-.55,0),bx(.01,.12,.01,0,-.36,0)]),b:'farmL'}}}
+function skSlot(fem){var G=SK.geo[fem?'F':'M'],g=new THREE.BufferGeometry();['position','normal','skinIndex','skinWeight'].forEach(function(a){g.setAttribute(a,G.getAttribute(a))});
+ var col=new Float32Array(G.attributes.position.count*3);g.setAttribute('color',new THREE.BufferAttribute(col,3));g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.3);
+ var bones=[],mk=function(x,y,par){var b=new THREE.Bone();b.position.set(x,y,0);if(par)par.add(b);bones.push(b);return b};
+ var root=mk(0,0),tl=mk(-.085,.93,root);mk(0,-.44,tl);var tr=mk(.085,.93,root);mk(0,-.44,tr);var ul=mk(-.193,1.405,root),fl=mk(0,-.29,ul),ur=mk(.193,1.405,root),fr=mk(0,-.29,ur);
+ var m=new THREE.SkinnedMesh(g,SK.mat);m.add(root);m.updateMatrixWorld(true);m.bind(new THREE.Skeleton(bones));m.castShadow=true;m.receiveShadow=true;m.frustumCulled=false;
+ var acc={};Object.keys(SK.acc).forEach(function(k){var a=SK.acc[k],me=new THREE.Mesh(a.g,new THREE.MeshStandardMaterial({roughness:/^h/.test(k)?.6:.7}));me.visible=false;me.castShadow=/^h(short|long|pony|bun|curly)$|^hat$/.test(k);(a.b==='farmR'?fr:a.b==='farmL'?fl:root).add(me);acc[k]=me});
+ SK.group.add(m);return {m:m,b:bones,col:col,g:g,fem:fem,acc:acc,p:null}}
+var _skc=new THREE.Color();function lin(h){return _skc.setHex(h<0||h==null?0:h).convertSRGBToLinear()}
+function skDress(sl,p){var o=p.o,pid=SK.geo[sl.fem?'F':'M'].userData.pid,pal=[o.skin,o.hair,o.top,o.bottom,o.shorts?o.bottom:o.legs,o.legs,o.shoes,0x1b1410,o.sleeve?o.top:o.arms,o.arms,o.sleeve?o.skin:o.arms].map(function(h){var c=lin(h);return [c.r,c.g,c.b]});
+ for(var i=0;i<pid.length;i++){var c=pal[pid[i]];sl.col[i*3]=c[0];sl.col[i*3+1]=c[1];sl.col[i*3+2]=c[2]}sl.g.attributes.color.needsUpdate=true;
+ var on=function(k,v,h){var a=sl.acc[k];a.visible=!!v;if(v)a.material.color.copy(lin(h))};
+ on('hshort',o.hs==='short'&&o.hat<0,o.hair);on('hlong',o.hs==='long',o.hair);on('hpony',o.hs==='pony',o.hair);on('hbun',o.hs==='bun'&&o.hat<0,o.hair);on('hcurly',o.hs==='curly'&&o.hat<0,o.hair);
+ on('beard',o.beard>=0,o.beard);on('glasses',o.glasses>=0,o.glasses);on('kippa',o.kippa>=0,o.kippa);on('tie',o.tie>=0,o.tie);on('vest',o.vest>=0,o.vest);on('hat',o.hat>=0&&!o.helmet,o.hat);on('helmet',!!o.helmet,o.hat);
+ on('bag',o.bag>=0,o.bag);on('purse',o.purse>=0,o.purse);on('skirt',o.skirt>=0,o.skirt);on('phone',!!o.phone,0x111111);on('shopbag',o.shop>=0,o.shop)}
+function skFree(sl){if(sl.p&&sl.p.slot===sl)sl.p.slot=null;sl.p=null;sl.m.visible=false;SK.pool[sl.fem?'F':'M'].push(sl)}
+function resetChars(){SK.bound.forEach(skFree);SK.bound=[]}
+function skAssign(){var cx=cam.position.x,cz=cam.position.z,cand=[];PPL.forEach(function(p){if(!p.vis)return;var d=(p.x-cx)*(p.x-cx)+(p.z-cz)*(p.z-cz);if(d<SKR*SKR)cand.push([d,p])});cand.sort(function(a,b){return a[0]-b[0]});
+ var want=new Set(cand.slice(0,MAXSK).map(function(c){return c[1]}));SK.bound=SK.bound.filter(function(sl){if(want.has(sl.p)){want.delete(sl.p);return true}skFree(sl);return false});
+ want.forEach(function(p){var sl=SK.pool[p.o.fem?'F':'M'].pop()||skSlot(p.o.fem);sl.p=p;p.slot=sl;sl.m.visible=true;skDress(sl,p);SK.bound.push(sl)})}
+function drawChars(dt){if(!PPL.length)return;skBuild();SK.timer-=dt;if(SK.timer<=0){SK.timer=.35;skAssign()}var t=performance.now()/1000;
+ SK.bound.forEach(function(sl,ii){var p=sl.p,m=sl.m;if(!p.vis){m.visible=false;return}m.visible=true;var s=p.sc,walking=p.st==='walk'&&!p.scoot,ph=p.ph,y;
+  if(p.sit)y=p.y+.47-.93*s;else y=H(p.x,p.z)+sidewalkLift(p.x,p.z)+(walking?Math.abs(Math.cos(ph))*.025*s:0)+(p.scoot?.13:0);
+  _p.set(p.x,y,p.z);_q.setFromAxisAngle(_y,p.yaw+(p.sit?Math.sin(t*.9+ii)*.06:0));warpPose(_p,_q,false,p.anc);m.position.copy(_p);m.quaternion.copy(_q);m.scale.setScalar(s);
+  var idle=Math.sin(t*1.2+ii)*.04,B=sl.b;
+  for(var k=0;k<2;k++){var sg=k?1:-1,fi=ph+(k?Math.PI:0),hip,knee,sh,el;
+   if(p.sit){hip=-1.5;knee=1.5;sh=-.45+idle;el=-1}
+   else if(p.scoot){hip=k?.12:-.12;knee=.08;sh=-.85;el=-.45}
+   else if(walking){hip=.5*Math.sin(fi);knee=.9*Math.max(0,-Math.cos(fi));sh=-.42*Math.sin(fi);el=-.28-.25*Math.max(0,-Math.sin(fi))}
+   else{hip=0;knee=0;sh=idle*sg;el=-.15}
+   if(p.stroller&&!p.sit){sh=-.95;el=-.45}
+   if(p.o.phone&&k===1&&!p.sit){sh=-.35;el=-1.55}
+   B[k?3:1].rotation.set(hip,0,0);B[k?4:2].rotation.set(knee,0,0);B[k?7:5].rotation.set(sh,0,sg*.06);B[k?8:6].rotation.set(el,0,0)}})}
+
 loadChars();build();requestAnimationFrame(loop);
 window.__city3d={S:S,R:R,sp:function(d){stepPeople(d)},dp:function(t){drawPeople(t)},mv:function(d){moveVehicles(d)},build:build,applyTime:applyTime,frame:frame,flyTo:flyTo,cam:cam,ctl:ctl,PPL:function(){return PPL},setClock:function(m){CLOCK=m},G:function(){return G}};
 })();
