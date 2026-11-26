@@ -392,7 +392,7 @@ function arterials(){ROADS=[];JUNC=[];var E=HALF+520,R=function(a){return (rnd()
  for(var i=0;i<ROADS.length;i++)for(var j=i+1;j<ROADS.length;j++){var A=ROADS[i],B=ROADS[j];if(A.kind==='hwy'||B.kind==='hwy')continue;
   for(var p=0;p<A.pts.length-1;p++)for(var q=0;q<B.pts.length-1;q++){var X=segX(A.pts[p],A.pts[p+1],B.pts[q],B.pts[q+1]);if(!X)continue;if(JUNC.some(function(J){return Math.hypot(J.x-X[0],J.z-X[1])<30}))continue;
    var inside=inCity(X[0],X[1]),sa=A.cum[p]+Math.hypot(X[0]-A.pts[p][0],X[1]-A.pts[p][1]),sb=B.cum[q]+Math.hypot(X[0]-B.pts[q][0],X[1]-B.pts[q][1]);
-   var type=!inside?'round':CSTYLE==='grid'?(rnd()<.8?'light':'round'):(rnd()<.8?'round':'light');var J={x:X[0],z:X[1],type:type,off:JUNC.length%2*12,a:A.id,b:B.id,sa:sa,sb:sb};JUNC.push(J);A.j.push({J:J,s:sa,ax:'a'});B.j.push({J:J,s:sb,ax:'b'})}}
+   var type=!inside?'round':CSTYLE==='grid'?(rnd()<RR.gridLight?'light':'round'):(rnd()<RR.otherRound?'round':'light');var J={x:X[0],z:X[1],type:type,off:JUNC.length%2*12,a:A.id,b:B.id,sa:sa,sb:sb};JUNC.push(J);A.j.push({J:J,s:sa,ax:'a'});B.j.push({J:J,s:sb,ax:'b'})}}
  // where arterials pass under the highway it is raised on a bridge
  HWY.bridges=[];ROADS.forEach(function(A){if(A===HWY)return;for(var p=0;p<A.pts.length-1;p++)for(var q=0;q<HWY.pts.length-1;q++){var X=segX(A.pts[p],A.pts[p+1],HWY.pts[q],HWY.pts[q+1]);if(X)HWY.bridges.push(HWY.cum[q]+Math.hypot(X[0]-HWY.pts[q][0],X[1]-HWY.pts[q][1]))}})}
 function hwyY(s){var y=0;HWY.bridges.forEach(function(b){var d=Math.abs(s-b);if(d<90)y=Math.max(y,7*sst(1-d/90)*1.0)});return y}
@@ -513,7 +513,7 @@ function drawStreets(){var MR=roadMats();var SC=new Uint8Array(GN*GN);STREETS.fo
 }
 function drawPaths(){var PP=[],okc=function(k,home){if(k<0||OCC[k]||RAST[k]===-2||RAST[k]===-3||RAST0[k]===-2||RAST0[k]===-6)return false;var v=RAST0[k];if(v===home||v===-5)return true;return v>=0&&home>=0&&REG[v].type==='green'&&REG[home].type==='green'};
  PATHS.forEach(function(pt){var mid=pt[pt.length>>1],hk=ci(mid[0],mid[1]),home=hk>=0?RAST0[hk]:-9,cur=[];pt.forEach(function(q){if(!okc(ci(q[0],q[1]),home)||PONDS.some(function(p){return Math.hypot(q[0]-p.x,q[1]-p.z)<p.r+2.5})){if(cur.length>3)PP.push(cur);cur=[]}else cur.push(q)});if(cur.length>3)PP.push(cur)});
- PP.forEach(function(pt){if(pt.length<6)return;ribbonY(pt,2.4,0,M.path,function(){return .12},3).userData.drapeH=1;LANES.push(pt);for(var k=5;k<pt.length-3;k+=12){var t=tanAt(pt,k);var bn=box(1.6,.45,.55,M.bench,pt[k][0]-t[1]*2,0,pt[k][1]+t[0]*2);bn.userData.liftH=1;bn.rotation.y=-Math.atan2(t[1],t[0]);var tk=ci(pt[k][0]+t[1]*3,pt[k][1]-t[0]*3);if(tk>=0&&!OCC[tk]&&RAST[tk]!==-2&&RAST[tk]!==-3)addTree(pt[k][0]+t[1]*3,pt[k][1]-t[0]*3,1)}})}
+ LABPATHS=PP;PP.forEach(function(pt){if(pt.length<6)return;ribbonY(pt,2.4,0,M.path,function(){return .12},3).userData.drapeH=1;LANES.push(pt);for(var k=5;k<pt.length-3;k+=12){var t=tanAt(pt,k);var bn=box(1.6,.45,.55,M.bench,pt[k][0]-t[1]*2,0,pt[k][1]+t[0]*2);bn.userData.liftH=1;bn.rotation.y=-Math.atan2(t[1],t[0]);var tk=ci(pt[k][0]+t[1]*3,pt[k][1]-t[0]*3);if(tk>=0&&!OCC[tk]&&RAST[tk]!==-2&&RAST[tk]!==-3)addTree(pt[k][0]+t[1]*3,pt[k][1]-t[0]*3,1)}})}
 // ---------- lots: a builder runs in a local frame, front facing +z, then everything it registered is moved into place ----------
 function inLot(x,z,yaw,k,fn){var gp=new THREE.Group(),y0=GZ(x,z);gp.userData.pad=1;gp.position.set(x,y0,z);gp.rotation.y=yaw;gp.scale.set(k,1,k);addRaw(gp);var T0=TARGET;TARGET=gp;
  var L=[trees.length,palms.length,olives.length,pines.length,acs.length,parked.length,SIT.length,STAND.length,WANDER.length,smokeSources.length],F0=CURFOOT;CURFOOT=[];fn();TARGET=T0;var MYF=CURFOOT;CURFOOT=F0;
@@ -599,6 +599,7 @@ function gardenLot0(){var stone=GSTYLE==='stone',fl=3+(Math.random()<.4?1:0),wal
  mbox(12,fl*3,9,s,M.roofFlat,0,.3,-1.5);box(12.2,.5,9.2,stone?M.stone:M.whiteWall,0,fl*3+.3,-1.5);box(14,.6,.4,stone?M.stoneWall:M.whiteWall,-.8,0,6);box(.4,.6,14,stone?M.stoneWall:M.whiteWall,-7.8,0,-1);box(.4,.6,14,stone?M.stoneWall:M.whiteWall,7.8,0,-1);box(1.4,1.3,.12,M.gate,6.2,0,6.02);
  plane(15.4,7.6,M.lawn,0,.05,2.2);plane(1.6,3,M.path,6.2,.07,4.5);addTree(-6,4.8,1.2);addTree(6.2,-6.4,1.15,Math.random()<.5?'pine':null);addTree(-6.4,-6.6,1.1)}
 // ---------- terrain coloured by neighbourhood ----------
+var LABPATHS=[],RR={gridLight:.8,otherRound:.8};
 var TCOL={center:0xd4cdbd,gov:0xcfc7b4,shikun:0xb8c08c,villa:0x9cba6c,garden:0x93b866,newT:0xc2c49a,newPlan:0xbdc497,ind:0xa8a3a8,emp:0xb3b0ad,tour:0xc9c08f,green:0x7fb257};
 function cityTerrain(){var seg=Math.round(2*HALF/2),geo=new THREE.PlaneGeometry(2*HALF,2*HALF,seg,seg);geo.rotateX(-Math.PI/2);var pos=geo.attributes.position,col=new Float32Array(pos.count*3),tc=new THREE.Color(),PAL=[0xa9c27b,0xd6c776,0x9fc06a,0xb49a69,0x8fb35c];
  for(var v=0;v<pos.count;v++){var x=pos.getX(v),z=pos.getZ(v),hb=HB(x,z),pp=padAt(x,z),h=pp?Math.min(pp.y,hb):hb;pos.setY(v,h);h=hb-GZ(x,z);var k=ci(Math.min(HALF-1,x),Math.min(HALF-1,z)),r=k>=0?RAST0[k]:-1;
@@ -909,7 +910,7 @@ function rayGround(ray,out){_pl.constant=0;if(!ray.intersectPlane(_pl,out))retur
 // ---------- one call builds the whole organic city ----------
 var STYLE_T={grid:'עיר ותיקה וצפופה, בהשראת דרום תל אביב',suburb:'שדרות וכיכרות, בהשראת מיתר',hills:'צירים מעוקלים וואדיות, בהשראת רמת בית שמש'};
 function build(){clearCity();GZR=null;PADS=[];PADIX=null;GH=[];var cty=CITIES[Math.floor(rnd()*CITIES.length)];G=null;WP=[];
- CSTYLE=cty.region==='צפון'?'hills':/^(givot|sharon)$/.test(cty.id)?'suburb':['grid','grid','suburb','hills'][Math.floor(rnd()*4)];
+ CSTYLE=cty.region==='צפון'?'hills':/^(givot|sharon)$/.test(cty.id)?'suburb':['grid','grid','suburb','hills'][Math.floor(rnd()*4)];if(window.LAB_STYLE)CSTYLE=window.LAB_STYLE;
  document.querySelector('#cityname b').textContent=cty.name;document.querySelector('#cityname small').textContent=cty.region+', '+cty.model+'. '+STYLE_T[CSTYLE]+'.';
  BND=[25+rnd()*30,rnd()*6.28,15+rnd()*20,rnd()*6.28];CENTER=[(rnd()-.5)*40,(rnd()-.5)*40];CITYHALL=null;
  HILLS=[];var nh=26+Math.floor(rnd()*10);for(var i=0;i<nh;i++)HILLS.push([(rnd()-.5)*HALF*1.7,(rnd()-.5)*HALF*1.7,18+rnd()*30,2.5+rnd()*(CSTYLE==='hills'?5:3)]);

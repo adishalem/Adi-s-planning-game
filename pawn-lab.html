@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>דמויות מופשטות</title>
+<style>
+:root{--bg:#eef0ec;--panel:rgba(255,255,255,.88);--ink:#1f2328;--muted:#5b636b;--line:rgba(0,0,0,.12);--acc:#f5c400;--accInk:#1f2328}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1e22;--panel:rgba(30,34,39,.9);--ink:#eef0f2;--muted:#a7b0b8;--line:rgba(255,255,255,.14)}}
+:root[data-theme="dark"]{--bg:#1b1e22;--panel:rgba(30,34,39,.9);--ink:#eef0f2;--muted:#a7b0b8;--line:rgba(255,255,255,.14)}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
+.panel{position:fixed;top:12px;right:12px;width:min(300px,calc(100vw - 32px));box-sizing:border-box;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+h1{font-size:17px;margin:0 0 4px}
+p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.45}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+button{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:7px 11px;cursor:pointer;min-height:36px}
+button[aria-pressed="true"]{background:var(--acc);color:var(--accInk);border-color:transparent;font-weight:600}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<canvas id="cv" aria-label="שורת דמויות מופשטות בתלת ממד"></canvas>
+<div class="panel">
+ <h1>דמויות מופשטות</h1>
+ <p>ראש עם עיניים גדולות וחיוך, כובע לפי סוג האדם, וגוף גלילי בצבע של הלבוש. בהליכה הן מקפצות.</p>
+ <div class="row" role="group" aria-label="תנועה">
+  <button type="button" data-pose="stand" aria-pressed="true">עמידה</button>
+  <button type="button" data-pose="walk" aria-pressed="false">הליכה</button>
+ </div>
+ <div class="row">
+  <button type="button" id="spin" aria-pressed="false">סיבוב</button>
+  <button type="button" id="again">דמויות אחרות</button>
+ </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// =================== PAWN: abstract townsfolk. A round head with big eyes and a small smile, a hat by type, a coloured cylinder body. They hop. ===================
+// PAWN.make(o) -> {g, body, head, parts}; PAWN.pose(p, {walk, ph, t, i}). Metres; feet at y=0, facing +z.
+var PAWN=(function(){
+ var G=null,_c=new THREE.Color();
+ function lin(h){return _c.setHex(h).convertSRGBToLinear().clone()}
+ function mat(h,o){o=o||{};return new THREE.MeshStandardMaterial({color:lin(h),roughness:o.r==null?.55:o.r,side:o.ds?THREE.DoubleSide:THREE.FrontSide})}
+ function lt(pr,seg,ps,pl){return new THREE.LatheGeometry(pr.map(function(q){return new THREE.Vector2(q[0],q[1])}),seg||32,ps||0,pl||Math.PI*2)}
+ // body: a smooth rounded cylinder (radius 1, height 1, scaled per person); the head sits on top
+ var BODY=[[.001,0],[.7,0],[.92,.035],[.99,.1],[1,.2],[1,.8],[.97,.9],[.86,.96],[.6,.995],[.001,1]];
+ function geos(){if(G)return G;G={};
+  G.body=lt(BODY,40);
+  G.band=lt([[1.012,.0],[1.012,1]].map(function(q,i){return q}),40);
+  G.stripe=lt([[1.008,.36],[1.008,.98]],6,-.2,.4);               // the shirt front of a suit
+  G.tie=lt([[1.012,.52],[1.012,.92]],4,-.06,.12);
+  G.hvBand=lt([[1.015,.0],[1.015,.08]],40);                        // reflective band of a hi-vis vest
+  G.head=new THREE.SphereGeometry(1,32,24);
+  G.eyeW=new THREE.SphereGeometry(1,20,16);G.eyeP=new THREE.SphereGeometry(1,16,12);G.eyeH=new THREE.SphereGeometry(1,10,8);
+  var sm=new THREE.TorusGeometry(1,.17,8,20,Math.PI*.8);sm.rotateZ(Math.PI*1.1);G.smile=sm;
+  // hats, built around a head of radius 1 centred at the origin
+  G.hard=new THREE.SphereGeometry(1.02,28,14,0,Math.PI*2,0,Math.PI/2);G.hard.scale(1,.82,1.06);G.hard.translate(0,.4,0);
+  G.hardBrim=new THREE.CylinderGeometry(1.2,1.2,.05,32);G.hardBrim.scale(1,1,1.12);G.hardBrim.translate(0,.42,.1);
+  G.hardRidge=new THREE.TorusGeometry(.98,.07,8,24,Math.PI);G.hardRidge.rotateY(Math.PI/2);G.hardRidge.scale(1,.82,1);G.hardRidge.translate(0,.4,0);
+  G.cap=new THREE.SphereGeometry(1.0,28,14,0,Math.PI*2,0,Math.PI/2);G.cap.scale(1,.75,1.04);G.cap.translate(0,.38,0);
+  G.visor=new THREE.CylinderGeometry(.85,.85,.05,24,1,false,-Math.PI/2,Math.PI);G.visor.scale(1,1,.9);G.visor.translate(0,.42,.62);
+  G.capButton=new THREE.SphereGeometry(.09,10,8);G.capButton.translate(0,1.13,0);
+  G.tembel=lt([[1.16,0],[1.1,.12],[.98,.4],[.76,.72],[.42,.95],[.12,1.04],[.001,1.05]],32);G.tembel.translate(0,.32,0);
+  G.straw=new THREE.CylinderGeometry(1.75,1.75,.05,40);G.straw.translate(0,.46,0);
+  G.strawTop=lt([[1.02,0],[1.0,.35],[.92,.52],[.001,.56]],32);G.strawTop.scale(.95,1,.95);G.strawTop.translate(0,.46,0);
+  G.strawBand=new THREE.CylinderGeometry(1.03,1.03,.14,32,1,true);G.strawBand.scale(.95,1,.95);G.strawBand.translate(0,.56,0);
+  G.flower=new THREE.SphereGeometry(.13,10,8);
+  G.beret=new THREE.SphereGeometry(1,28,16);G.beret.scale(1.06,.36,1.06);G.beret.rotateZ(.22);G.beret.translate(-.1,.8,-.02);
+  G.kippa=new THREE.SphereGeometry(.62,20,8,0,Math.PI*2,0,.55);G.kippa.translate(0,.4,-.25);
+  G.hair=new THREE.SphereGeometry(1.04,28,16,0,Math.PI*2,0,Math.PI*.42);G.hair.rotateX(-.45);
+  G.bun=new THREE.SphereGeometry(.36,16,12);G.bun.translate(0,.75,-.65);
+  G.pony=new THREE.SphereGeometry(.3,14,10);G.pony.scale(1,1.6,1);G.pony.translate(0,.1,-1.08);
+  return G}
+ // o: {body, band?, stripe?, tie?, hv?, skin, hat:'hard'|'cap'|'tembel'|'straw'|'beret'|'kippa'|null, hatC, hair, hairStyle:'short'|'bun'|'pony'|null, h (height), w (width)}
+ function make(o){var g=geos(),root=new THREE.Group(),bob=new THREE.Group();root.add(bob);
+  var H=o.h||1.0,W=o.w||.2,R=o.head||.19,P=[];
+  var body=new THREE.Mesh(g.body,mat(o.body,{r:.6}));body.scale.set(W,H,W);body.castShadow=body.receiveShadow=true;bob.add(body);
+  if(o.band!=null){var b=new THREE.Mesh(g.band,mat(o.band,{r:.6}));b.scale.set(W,H*(o.bandH||.42),W);b.castShadow=true;bob.add(b)}
+  if(o.stripe!=null){var st=new THREE.Mesh(g.stripe,mat(o.stripe,{r:.5}));st.scale.set(W,H,W);bob.add(st)}
+  if(o.tie!=null){var ti=new THREE.Mesh(g.tie,mat(o.tie,{r:.5}));ti.scale.set(W*1.004,H,W*1.004);bob.add(ti)}
+  if(o.hv!=null)[.48,.66].forEach(function(y){var hb=new THREE.Mesh(g.hvBand,mat(o.hv,{r:.35}));hb.scale.set(W,H,W);hb.position.y=H*y;bob.add(hb)});
+  var head=new THREE.Group();head.position.y=H+R*.92;bob.add(head);
+  var hm=new THREE.Mesh(g.head,mat(o.skin,{r:.6}));hm.scale.setScalar(R);hm.castShadow=true;head.add(hm);
+  // big eyes with a highlight, a small smile
+  [-1,1].forEach(function(s){var w=new THREE.Mesh(g.eyeW,mat(0xffffff,{r:.3}));w.scale.set(R*.2,R*.26,R*.1);w.position.set(s*R*.34,R*.12,R*.9);head.add(w);
+   var p=new THREE.Mesh(g.eyeP,mat(0x231a14,{r:.3}));p.scale.set(R*.12,R*.16,R*.07);p.position.set(s*R*.33,R*.1,R*.97);head.add(p);
+   var hl=new THREE.Mesh(g.eyeH,mat(0xffffff,{r:.2}));hl.scale.setScalar(R*.04);hl.position.set(s*R*.33+R*.04,R*.17,R*1.02);head.add(hl)});
+  var sm=new THREE.Mesh(g.smile,mat(0x7a3b2e,{r:.5}));sm.scale.setScalar(R*.16);sm.position.set(0,-R*.3,R*.93);sm.rotation.x=-.25;head.add(sm);
+  function hatPart(geo,h,scale,ds){var m=new THREE.Mesh(geo,mat(h,{ds:ds}));m.scale.setScalar(scale||R);m.castShadow=true;head.add(m);return m}
+  if(o.hairStyle&&!(o.hat&&o.hat!=='kippa'&&o.hairStyle==='short')){var hr=hatPart(g.hair,o.hair);if(o.hairStyle==='bun'&&!o.hat)hatPart(g.bun,o.hair);if(o.hairStyle==='pony')hatPart(g.pony,o.hair)}
+  switch(o.hat){
+   case 'hard':hatPart(g.hard,o.hatC);hatPart(g.hardBrim,o.hatC);hatPart(g.hardRidge,o.hatC);break;
+   case 'cap':hatPart(g.cap,o.hatC);hatPart(g.visor,o.hatC,null,true);hatPart(g.capButton,o.hatC);break;
+   case 'tembel':var t=hatPart(g.tembel,o.hatC);t.rotation.z=.08;break;
+   case 'straw':hatPart(g.straw,0xe3c98a,null,true);hatPart(g.strawTop,0xe3c98a);hatPart(g.strawBand,o.hatC,null,true);
+    [0xff5d73,0xffd23f,0xffffff].forEach(function(fc,k){var f=hatPart(g.flower,fc);var a=.35+k*.32;f.position.set(Math.sin(a)*R*.99,R*.56,Math.cos(a)*R*.99)});break;
+   case 'beret':hatPart(g.beret,o.hatC);break;
+   case 'kippa':hatPart(g.kippa,o.hatC);break}
+  return {g:root,bob:bob,body:body,head:head,H:H,R:R}}
+ // hopping: small jumps with a squash on landing; standing: a slow breath
+ function pose(p,s){var t=s.t||0,i=s.i||0;
+  if(s.walk){var ph=s.ph||0,u=Math.abs(Math.sin(ph)),land=1-u;p.bob.position.y=u*.09;var sq=1-.07*Math.pow(land,6);p.bob.scale.set(1/Math.sqrt(sq),sq,1/Math.sqrt(sq));p.bob.rotation.x=.06;p.head.rotation.z=Math.sin(ph)*.05}
+  else{p.bob.position.y=0;var br=1+.012*Math.sin(t*2+i);p.bob.scale.set(1,br,1);p.bob.rotation.x=0;p.head.rotation.z=Math.sin(t*.7+i)*.04}}
+ return {make:make,pose:pose,geos:geos}})();
+
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function chance(k){return Math.random()<k}
+var SKIN=[0xf1c27d,0xe0ac69,0xc68642,0x8d5524,0xffdbac,0xd4a373],HAIR=[0x1b1410,0x3b2a1d,0x5a3d26,0x8a6a45,0xc9a15e,0x2a2a2a,0x6b3a1f];
+var BRIGHT=[0xe8443a,0x2f6fd6,0xf5c400,0x24b47e,0xff8a3d,0x8e5bb5,0x1abc9c,0x7fb3d5,0xff6fa8,0x5c6bc0];
+// one person of a given role: body colour, details on the body, hat, size
+function role(r){var o={skin:pick(SKIN),hair:pick(HAIR),hairStyle:pick(['short','short','bun','pony']),h:1.0,w:.2,head:.19,hat:null};
+ switch(r){
+  case 'casual':o.body=pick(BRIGHT);break;
+  case 'suit':o.body=pick([0x1f2228,0x262a33,0x2b2b2e]);o.stripe=0xf4f4f2;if(chance(.7))o.tie=pick([0xb3263a,0x1f4e8c,0x6b6f76]);o.hairStyle='short';if(chance(.25)){o.hat='kippa';o.hatC=0x1a1a1a}break;
+  case 'soldier':o.body=pick([0x4b5232,0x50553a,0x464b2e]);if(chance(.5)){o.hat='beret';o.hatC=pick([0x4b5232,0x7a1f2b,0x3a3f2a,0x5a2d6e])}if(o.hairStyle==='pony'&&o.hat)o.hairStyle='bun';break;
+  case 'worker':o.body=pick([0xff8a1a,0xf5c400]);o.hv=0xdfe3e6;o.hat='hard';o.hatC=pick([0xf5c400,0xf5c400,0xf4f4f4]);o.hairStyle='short';break;
+  case 'grandma':o.body=pick([0xb7a6d9,0x9cc3d5,0xe8b4b8,0xc8d6a0]);o.hat='straw';o.hatC=pick([0xff6fa8,0x2f6fd6,0x24b47e]);o.hair=0xd9d9d9;o.hairStyle='bun';o.h=.94;break;
+  case 'grandpa':o.body=pick([0x8a7d6a,0x6b7a8a,0xb9a88a]);o.hat='tembel';o.hatC=pick([0x2f5fa8,0xc8b48a,0x3d6b9a]);o.hair=0xd9d9d9;o.hairStyle='short';o.h=.95;break;
+  case 'hiker':o.body=pick([0x24b47e,0xe8443a,0x2f6fd6]);o.hat='tembel';o.hatC=pick([0xc8b48a,0x6b8e23]);break;
+  case 'kid':o.body=pick(BRIGHT);o.h=.6;o.w=.15;o.head=.165;if(chance(.6)){o.hat='cap';o.hatC=pick(BRIGHT)}break;
+  case 'toddler':o.body=pick(BRIGHT);o.h=.38;o.w=.13;o.head=.15;o.hairStyle=chance(.5)?'short':null;break;
+  case 'waiter':o.body=0xf4f4f2;o.band=0x1c1c1f;o.bandH=.45;o.hairStyle='short';break;
+  case 'sport':o.body=pick([0xe8443a,0x2f6fd6,0xf5c400]);o.hat='cap';o.hatC=pick([0x1c1c1f,0xf4f4f4,0xe8443a]);break}
+ return o}
+var ROLES=['worker','suit','casual','soldier','grandma','kid','casual','grandpa','toddler','soldier','waiter','hiker','sport','casual','worker','suit'];
+var cv=document.getElementById('cv'),R=new THREE.WebGLRenderer({canvas:cv,antialias:true});R.setPixelRatio(Math.min(2,window.devicePixelRatio||1));R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
+var S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(32,1,.1,200);cam.position.set(0,1.6,10);var ctl=new THREE.OrbitControls(cam,cv);ctl.target.set(0,.8,0);ctl.enableDamping=false;ctl.maxPolarAngle=1.5;ctl.minDistance=1;ctl.maxDistance=30;ctl.update();
+var dark=matchMedia('(prefers-color-scheme: dark)').matches;S.background=new THREE.Color(dark?0x1b1e22:0xeef0ec).convertSRGBToLinear();
+S.add(new THREE.HemisphereLight(0xffffff,0x8a8070,.8));var sun=new THREE.DirectionalLight(0xfff2dd,1.5);sun.position.set(-4,8,6);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);var sc=sun.shadow.camera;sc.left=-9;sc.right=9;sc.top=6;sc.bottom=-3;sc.far=30;sun.shadow.bias=-.0005;S.add(sun);
+var ground=new THREE.Mesh(new THREE.CircleGeometry(16,64),new THREE.MeshStandardMaterial({color:new THREE.Color(dark?0x2a2f35:0xd9dcd5).convertSRGBToLinear(),roughness:.95}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;S.add(ground);
+var CAST=[],POSE='stand',SPIN=false;
+function cast(){CAST.forEach(function(c){S.remove(c.p.g)});CAST=[];var n=ROLES.length,gap=.72;
+ ROLES.forEach(function(r,i){var o=role(r),p=PAWN.make(o),x=(i-(n-1)/2)*gap;p.g.position.x=x;S.add(p.g);CAST.push({p:p,x:x,ph:Math.random()*6})})}
+document.querySelectorAll('[data-pose]').forEach(function(b){b.addEventListener('click',function(){POSE=b.dataset.pose;document.querySelectorAll('[data-pose]').forEach(function(x){x.setAttribute('aria-pressed',String(x===b))})})});
+document.getElementById('spin').addEventListener('click',function(){SPIN=!SPIN;this.setAttribute('aria-pressed',String(SPIN))});
+document.getElementById('again').addEventListener('click',cast);
+function size(){var w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}addEventListener('resize',size);size();
+var last=performance.now(),rot=0,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(now){var dt=Math.min(.05,(now-last)/1000);last=now;if(SPIN&&!reduce)rot+=dt*.6;
+ CAST.forEach(function(c,i){var walk=POSE==='walk'&&!reduce;if(walk)c.ph+=dt*(c.p.H<.7?8:6.2);c.p.g.rotation.y=rot;PAWN.pose(c.p,{walk:walk,ph:c.ph,t:now/1000,i:i})});
+ R.render(S,cam);requestAnimationFrame(loop)}
+cast();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
