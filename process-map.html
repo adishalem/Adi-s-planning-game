@@ -19,6 +19,7 @@ header.top b{font-family:var(--display);font-weight:400;font-size:1.25rem;color:
 header.top nav{display:flex;gap:6px;flex-wrap:wrap}
 header.top nav a{color:#fff;text-decoration:none;padding:6px 10px;border-radius:8px;font-size:.9rem}
 header.top nav a:hover{background:rgba(255,255,255,.12)}
+header.top nav a[aria-current="page"]{background:rgba(255,255,255,.16)}
 header.top nav a.pri{background:var(--accent);color:var(--accent-ink);font-weight:600}
 a:focus-visible,button:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
 header.top a:focus-visible{outline-color:var(--accent)}
@@ -89,7 +90,7 @@ footer{padding:28px 0 44px;color:var(--muted);font-size:.85rem}
 .cta{display:inline-block;margin-top:6px;background:var(--accent);color:var(--accent-ink);font-weight:600;text-decoration:none;padding:10px 18px;border-radius:10px}
 </style>
 
-<header class="top"><div class="wrap"><b>עיר ואם-אמק</b><nav aria-label="ניווט באתר"><a href="index.html">דף הבית</a><a href="labs.html">מעבדות</a><a class="pri" href="game.html">למשחק</a></nav></div></header>
+<header class="top"><div class="wrap"><b>עיר ואם-אמק</b><nav aria-label="ניווט באתר"><a href="index.html">דף הבית</a><a href="process-map.html" aria-current="page">איך משחקים</a><a href="labs.html">מעבדות</a><a class="pri" href="game.html">למשחק</a></nav></div></header>
 
 <main>
 <div class="wrap hero">
