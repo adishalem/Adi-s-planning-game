@@ -93,7 +93,7 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .rbtn{display:flex;flex-direction:column;align-items:center;gap:3px;width:58px;padding:8px 2px;border-radius:var(--r);color:var(--muted);font-size:.64rem;line-height:1.15;text-align:center}
 .rbtn svg{width:22px;height:22px}
 .rbtn:hover{background:var(--hover);color:var(--ink)}
-.rbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.rbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)} .rbtn.locked{opacity:.38;cursor:not-allowed} .rbtn.locked:hover{background:none;color:var(--muted)} .rbtn.newly{animation:rbnew 1.2s ease-in-out 6} @keyframes rbnew{50%{box-shadow:0 0 0 3px var(--accent)}} @media (prefers-reduced-motion:reduce){.rbtn.newly{animation:none;box-shadow:0 0 0 3px var(--accent)}}
 .flyout{position:fixed;z-index:5;left:calc(88px + env(safe-area-inset-left,0px));top:calc(76px + env(safe-area-inset-top,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:310px;display:flex;flex-direction:column;overflow:hidden}
 .flyout[hidden]{display:none}
 .fhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid var(--line)}
@@ -834,6 +834,23 @@ var LV={
  balanced:{tier:3,t:'עיר מאוזנת',d:'בית ספר חדש, ובלי מחסור בגני ילדים.',goal:function(){return (S.done.school>=1?.5:0)+(ganGap()<=0?.5:0)}}};
 var ELECT={id:'plan',t:'התוכנית האסטרטגית',d:'לעמוד בחמשת היעדים בבת אחת.',goal:function(){return planRows().filter(function(x){return x.ok}).length/5},reward:0};
 function lvGoal(L){if(L.goal)return L.goal();var d=0;L.ty.forEach(function(k){d+=S.done[k]||0});var nn=L.n||1;if(d>=nn)return 1;return Math.max(d/nn*.9,S.projects.some(function(p){return !p.done&&L.ty.indexOf(p.type)>=0})?.3:0)}
+
+// ---------- gradual unlocking: each level opens more of the city's tools ----------
+// cat: index in GROUPS, 'border', or 'permits' (the licensing tab). level = first S.level at which it is open.
+var UNLOCK=[{k:'2',lv:0},{k:'3',lv:0},{k:'0',lv:1,t:'בנייה חדשה'},{k:'permits',lv:1,t:'רשות הרישוי'},{k:'1',lv:2,t:'התחדשות ושימור'},{k:'4',lv:2,t:'תשתיות ברחובות'},{k:'5',lv:3,t:'תוכנית מתאר והסמכה'},{k:'border',lv:3,t:'תחום שיפוט'}];
+function catOf(type){if(type==='border')return 'border';var i=GROUPS.findIndex(function(g){return g[1].indexOf(type)>=0});return i<0?null:String(i)}
+function levelCats(i){var L=LEVELS[i];if(!L)return [];var V=LV[L.id];if(L.id==='rezone')return ['0'];if(L.id==='balanced')return ['2'];if(!V||!V.ty)return [];return V.ty.map(catOf).filter(function(c){return c!=null})}
+function unlocked(k){if(typeof S==='undefined'||!S||!S.projects||!LEVELS.length)return true;if(S.track==='pro'||S.allOpen)return true;var u=UNLOCK.filter(function(x){return x.k===k})[0];if(!u||S.level>=u.lv)return true;
+ if(levelCats(S.level).indexOf(k)>=0)return true;if(k==='permits'&&(S.permits||[]).some(function(r){return !r.done}))return true;
+ if(k!=='permits'&&S.projects.some(function(p){return !p.done&&catOf(p.type)===k}))return true;return false}
+function lockLevel(k){var u=UNLOCK.filter(function(x){return x.k===k})[0];return u?u.lv:0}
+function typeOpen(type){var c=catOf(type);return c==null||unlocked(c)}
+function lockedToast(k){toast('ייפתח אחרי שלב '+lockLevel(k)+'. בינתיים מתמקדים במשימה של השלב הנוכחי.','bad')}
+function renderLocks(){document.querySelectorAll('#rail [data-cat]').forEach(function(b){var k=b.dataset.cat,o=unlocked(k);b.classList.toggle('locked',!o);b.setAttribute('aria-disabled',String(!o));if(!o)b.setAttribute('data-tip','ייפתח אחרי שלב '+lockLevel(k));else if(b.getAttribute('data-tip')&&/^ייפתח/.test(b.getAttribute('data-tip')))b.removeAttribute('data-tip')});
+ var tp=document.getElementById('tab-permits');if(tp)tp.hidden=!unlocked('permits');if(!unlocked('permits')&&S.tab==='permits')showTab('plot')}
+function opensAt(i){return UNLOCK.filter(function(u){return u.lv===i+1&&u.t}).map(function(u){return u.t})}
+function announceUnlocks(){if(S.track==='pro'||S.allOpen)return;var n=opensAt(S.level-1);if(!n.length)return;toast('נפתח עכשיו: '+n.join(', '),'good');log('עם השלב החדש נפתחו: '+n.join(', ')+'.','good');
+ document.querySelectorAll('#rail [data-cat]').forEach(function(b){var u=UNLOCK.filter(function(x){return x.k===b.dataset.cat})[0];if(u&&u.lv===S.level){b.classList.add('newly');setTimeout(function(){b.classList.remove('newly')},9000)}})}
 var LEVELS=[];
 function buildLevels(force,first){var used=[];if(force)used.push(force);if(first)used.push(first);
  var pick=function(tier,n){var ks=shuf(Object.keys(LV).filter(function(k){return LV[k].tier===tier&&used.indexOf(k)<0})).slice(0,Math.max(0,n));used=used.concat(ks);return ks};
@@ -1050,11 +1067,11 @@ function startProject(){
  startStage(p);renderProducts();renderAll();
 }
 function borderBusy(){return S.border===0||S.projects.some(function(p){return p.type==='border'})}
-function startBorder(){if(borderBusy())return;if(busy()>=S.staff){toast('כל המתכננים עסוקים. אפשר לגייס עוד.','bad');return}
+function startBorder(){if(borderBusy())return;if(!unlocked('border')){lockedToast('border');return}if(busy()>=S.staff){toast('כל המתכננים עסוקים. אפשר לגייס עוד.','bad');return}
  var tl=[];each(function(t){if(t.x<S.border&&t.use==='agri')tl.push(t)});var mid=tile(1,8);tl.sort(function(a,b){return (a===mid?-1:0)-(b===mid?-1:0)});
  var p=newProject({type:'border',x:mid.x,y:mid.y,tiles:tl,stages:makeStages('border')});
  log('נפתח הליך להרחבת הקו הכחול מול משרד הפנים.');S.sel={x:mid.x,y:mid.y};startStage(p);renderProducts();renderAll()}
-function startAddon(t,type){if(busy()>=S.staff){toast('כל המתכננים עסוקים. אפשר לגייס עוד.','bad');return}
+function startAddon(t,type){if(!typeOpen(type)){lockedToast(catOf(type));return}if(busy()>=S.staff){toast('כל המתכננים עסוקים. אפשר לגייס עוד.','bad');return}
  var p=newProject({type:type,x:t.x,y:t.y,tiles:[t],addon:true,stages:makeStages(type)});
  log('נפתח תיק מימוש: '+TYPES[type].name+' בפארק.');burst([t],'#ffb547',10);startStage(p);renderAll()}
 function startStage(p){
@@ -1137,7 +1154,7 @@ function complete(p){
  if(p.type==='gan'&&p.ch.build==='modular')S.timers.push({at:S.month+18,ev:'modularComplaint'});
  renderProducts();checkLevel();
 }
-function checkLevel(){var L=LEVELS[S.level];if(!L||S.level>=LEVELS.length-1)return;if(L.goal()>=1){S.money+=L.reward;stamp('שלב '+(S.level+1)+' הושלם');burstAll();log('שלב '+(S.level+1)+' הושלם! מענק ממשרד הפנים לתקציב הפיתוח: '+fmt(L.reward)+'.','good');S.level++;var nx=LEVELS[S.level];log('שלב '+(S.level+1)+': '+nx.t+'. '+nx.d)}}
+function checkLevel(){var L=LEVELS[S.level];if(!L||S.level>=LEVELS.length-1)return;if(L.goal()>=1){S.money+=L.reward;stamp('שלב '+(S.level+1)+' הושלם');burstAll();log('שלב '+(S.level+1)+' הושלם! מענק ממשרד הפנים לתקציב הפיתוח: '+fmt(L.reward)+'.','good');S.level++;var nx=LEVELS[S.level];log('שלב '+(S.level+1)+': '+nx.t+'. '+nx.d);announceUnlocks();renderLocks()}}
 
 // ---------- project events ----------
 var AGENCIES=[['פיקוד העורף','מבקש להזיז את הממ"ד 40 ס"מ צפונה.'],['רשות הכבאות','דורשת דרך גישה רחבה יותר לרכב כיבוי.'],['תאגיד המים','ממתין לחתימה של מנהל שנמצא בחופשה.'],['חברת החשמל','מבקשת להעביר את חדר הטרנספורמציה לצד השני של המגרש.']];
@@ -1417,7 +1434,7 @@ function planCheck(){if(S.over)return;var r=planRows(),all=r.every(function(x){r
  if(paceCfg().deadline&&S.month>=96&&!S.planWon&&!S.planEnd){S.planEnd=true;var ok=r.filter(function(x){return x.ok}).map(function(x){return x.t}),no=r.filter(function(x){return !x.ok}).map(function(x){return x.t});
    openModal({who:'מליאת המועצה',title:'הגיעה 2035',text:'התוכנית האסטרטגית הגיעה לסוף התקופה שלה.\nהושגו: '+(ok.join(', ')||'אף יעד')+'.\nלא הושגו: '+no.join(', ')+'.\nהמועצה מאשרת תוכנית חדשה, עם הלקחים.',
      options:[{label:'להמשיך לנהל את העיר',primary:true,fx:function(){}},{label:'לשחק שוב',fx:init}]})}}
-function renderLevels(){var rl=document.getElementById('refline');if(rl){var on=S.reforms&&S.reforms.length;rl.hidden=!on;rl.textContent=on?'רפורמות פעילות: '+S.reforms.map(function(id){return REFS[id].t}).join(', ')+'.':''}var B=document.getElementById('lvbox');if(!B)return;B.innerHTML='';LEVELS.forEach(function(L,i){var done=i<S.level,cur=i===S.level,d=el('div','pl'+(done?' ok':cur?' cur':' fut')),ck=el('span','ck');ck.innerHTML=done?'<svg class="i" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>':String(i+1);d.appendChild(ck);d.appendChild(el('b',null,L.t));d.appendChild(el('small',null,L.d+(L.reward?' מענק לתקציב הפיתוח: '+fmt(L.reward)+'.':'')));if(cur){var pr=el('div','prog'),ii=el('i');ii.style.width=Math.round(Math.min(1,L.goal())*100)+'%';pr.appendChild(ii);d.appendChild(pr)}B.appendChild(d)})}
+function renderLevels(){var rl=document.getElementById('refline');if(rl){var on=S.reforms&&S.reforms.length;rl.hidden=!on;rl.textContent=on?'רפורמות פעילות: '+S.reforms.map(function(id){return REFS[id].t}).join(', ')+'.':''}var B=document.getElementById('lvbox');if(!B)return;B.innerHTML='';LEVELS.forEach(function(L,i){var done=i<S.level,cur=i===S.level,d=el('div','pl'+(done?' ok':cur?' cur':' fut')),ck=el('span','ck');ck.innerHTML=done?'<svg class="i" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>':String(i+1);d.appendChild(ck);d.appendChild(el('b',null,L.t));d.appendChild(el('small',null,L.d+(L.reward?' מענק לתקציב הפיתוח: '+fmt(L.reward)+'.':'')+(S.track!=='pro'&&opensAt(i).length?' פותח: '+opensAt(i).join(', ')+'.':'')));if(cur){var pr=el('div','prog'),ii=el('i');ii.style.width=Math.round(Math.min(1,L.goal())*100)+'%';pr.appendChild(ii);d.appendChild(pr)}B.appendChild(d)})}
 function renderPlan(){var B=document.getElementById('planbox');if(!B)return;B.innerHTML='';
  planRows().forEach(function(r){var d=el('div','pl'+(r.ok?' ok':'')),ck=el('span','ck');ck.innerHTML=r.ok?'<svg class="i" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>':'';d.appendChild(ck);d.appendChild(el('b',null,r.t));d.appendChild(el('small',null,r.v));var pr=el('div','prog'),i=el('i');i.style.width=Math.round(r.f*100)+'%';pr.appendChild(i);d.appendChild(pr);B.appendChild(d)});
  var IB=document.getElementById('infrabox');if(!IB)return;IB.innerHTML='';var ix=infraIdx();
@@ -1475,7 +1492,7 @@ function tickMonth(){
    finishStage(p)});
  if(S.freeze>0)S.freeze--;if(S.slow>0)S.slow--;
  if(S.crisis){S.crisis.left--;if(S.crisis.left<=0){log('המשבר ('+S.crisis.t+') הסתיים. חוזרים לעבודה.','good');S.crisis=null}}
- S.timers=S.timers.filter(function(t){if(t.at<=S.month){inboxAdd(TIMERS[t.ev]());return false}return true}); if(rnd()<0.07)log(FLAVOR[Math.floor(rnd()*FLAVOR.length)]);maybeCrisis();maybeOpp();scenTick();infraTick();planCheck();if(S.fireAt&&--S.fireAt.left<=0)S.fireAt=null;permitTick();heritageTick();reformTick();setTimeout(saveGame,0);
+ S.timers=S.timers.filter(function(t){if(t.at<=S.month){inboxAdd(TIMERS[t.ev]());return false}return true}); if(rnd()<0.07)log(FLAVOR[Math.floor(rnd()*FLAVOR.length)]);maybeCrisis();maybeOpp();scenTick();infraTick();planCheck();if(S.fireAt&&--S.fireAt.left<=0)S.fireAt=null;if(unlocked('permits'))permitTick();heritageTick();reformTick();setTimeout(saveGame,0);
  if(rnd()<0.12)log(FLAVOR[Math.floor(rnd()*FLAVOR.length)]);
  checkLevel();
  if(S.ops<-3&&!S.opsWarned){S.opsWarned=true;log('הגזברות: התקציב הרגיל בגירעון. צריך הכנסות מעסקים או לצמצם הוצאות, אחרת משרד הפנים יתערב.','bad')}
@@ -1864,7 +1881,7 @@ document.addEventListener('focusout',hideTip);
 function routeList(stages,curIdx,p){var ol=el('ol','route');stages.forEach(function(s,i){if(p&&((s.only&&!p[s.only])||(s.skip&&p[s.skip])))return;
    var li=el('li',(i<curIdx?'done':i===curIdx?'cur':'')+(s.plan?' plan':''));li.appendChild(el('span','dot'));var nm=el('span',null,s.name);if(s.plan&&(curIdx<0||i>=curIdx))nm.appendChild(el('span','tag',' (תוכנית)'));li.appendChild(nm);
    li.appendChild(el('span','m',i===curIdx&&p?Math.max(0,p.left)+' ח׳':s.months+' ח׳'));ol.appendChild(li)});return ol}
-function renderProducts(){var box=document.getElementById('plistp');box.innerHTML='';var gi=(S.cat==null||S.cat==='border')?-1:+S.cat;
+function renderProducts(){renderLocks();var box=document.getElementById('plistp');box.innerHTML='';var gi=(S.cat==null||S.cat==='border')?-1:+S.cat;
  document.getElementById('products').hidden=S.cat==null;document.body.classList.toggle('fly-open',S.cat!=null);document.querySelectorAll('#rail [data-cat]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.cat===String(S.cat)))});
  document.getElementById('fly-title').textContent=S.cat==='border'?'תחום שיפוט':gi>=0?GROUPS[gi][0]:'';
  KEYS.forEach(function(k,i){if(gi<0||GROUPS[gi][1].indexOf(k)<0)return;var T=TYPES[k],open=S.openProd===k,it=el('div','prod'+(open?' open':'')+(S.tool===k?' active':''));
@@ -1892,7 +1909,7 @@ function renderProducts(){var box=document.getElementById('plistp');box.innerHTM
    var re=el('p',null,'מימוש: '+B.real);re.style.color='var(--green)';bb.appendChild(re);
    var gb=el('button','cyanb',S.border===0?'תחום השיפוט כבר הורחב':borderBusy()?'ההליך כבר פתוח':'לפתוח הליך מול משרד הפנים');gb.type='button';gb.id='pick-border';gb.disabled=borderBusy();gb.addEventListener('click',startBorder);bb.appendChild(gb);bi.appendChild(bb)}
  box.appendChild(bi)}
-function selectTool(k){S.tool=S.tool===k?null:k;S.openProd=k;S.site=null;S.just=null;S.ch={};S.part=0;S.tamal=false;
+function selectTool(k){if(k&&S.tool!==k&&!typeOpen(k)){lockedToast(catOf(k));return}S.tool=S.tool===k?null:k;S.openProd=k;S.site=null;S.just=null;S.ch={};S.part=0;S.tamal=false;
  if(wide())S.cat=String(GROUPS.findIndex(function(g){return g[1].indexOf(k)>=0}));else if(S.tool)S.cat=null;showTab('plot',true);renderProducts();renderPanel()}
 function renderAll(){checkMeters();renderPermits();renderHUD();renderPanel();renderProjects();renderGoal();renderActions();renderInbox()}
 function setMeter(id,v){document.getElementById(id).style.width=v+'%'}
@@ -2056,7 +2073,7 @@ function programReady(k){if(S.projects.some(function(p){return p.type===k}))retu
  if(busy()>=S.staff)return 'כל המתכננים עסוקים';return ''}
 function startProgram(k){var why=programReady(k);if(why){toast(why,'bad');return}var T=TYPES[k],c=T.choices[0];
  openModal({who:'מחלקת ההנדסה',title:T.name,text:c.label,options:c.opts.map(function(o,i){return {label:o.t,sub:o.d,primary:i===0,fx:function(){var ch={};ch[c.key]=o.v;launchProgram(k,ch)}}}).concat([{label:'ביטול',fx:function(){}}])})}
-function launchProgram(k,ch){if(k==='qualify'&&ch.kind==='expert'&&S.staff<5){toast('ועדה עצמאית מיוחדת צריכה 5 מתכננים.','bad');return}var h=hallTile();
+function launchProgram(k,ch){if(!typeOpen(k)){lockedToast(catOf(k));return}if(k==='qualify'&&ch.kind==='expert'&&S.staff<5){toast('ועדה עצמאית מיוחדת צריכה 5 מתכננים.','bad');return}var h=hallTile();
  var p=newProject({type:k,x:h.x,y:h.y,tiles:[h],program:true,ch:ch,partLevel:k==='master'?2:0,stages:makeStages(k,false,ch)});log('נפתח הליך: '+TYPES[k].name+'.');S.sel={x:h.x,y:h.y};burst([h],'#4cd3ff',14);startStage(p);renderProducts();renderAll()}
 EV.hcomm=function(p){if(rnd()<0.6)return null;return {who:'הוועדה לשימור אתרים',title:'איזו דרגת שימור?',text:'הוועדה ממליצה על שימור מחמיר, כולל הפנים. הבעלים מבקשים לשמר רק את החזיתות.',options:[
    {label:'שימור מחמיר',sub:'1+ חודש, אמון +2',fx:function(){delay(p,1);S.trust=clamp(S.trust+2)}},{label:'שימור חזיתות',sub:'הון פוליטי +2',fx:function(){S.capital=clamp(S.capital+2)}}]}};
@@ -2713,9 +2730,9 @@ var TSTEPS=[
  {t:'הזמן מתקדם',x:'הזמן זז רק כשיש תיק פתוח. לחצו ▶ כדי להריץ, או ⏭ (מקש N) כדי להתקדם חודש אחד. חכו להחלטה הראשונה.',el:'.tools',done:function(){return S.inbox.length>0}},
  {t:'פעולה נדרשת',x:'בשלבים החשובים צריך להחליט איך לבצע אותם, והפרויקט מחכה לכם. פתחו את תיבת ההחלטות ובחרו.',el:'#inboxbtn',done:function(){return TUT.sawAct&&!S.modal}},
  {t:'פעולות שמחזקות את העיר',x:'בלשונית "פעולות" אפשר לחזק אמון, הון פוליטי ויחסים עם המחוזית, ולהגדיל את התקציב הרגיל. כל פעולה גם נראית בעיר.',el:'#side',next:true,show:function(){showTab('acts',true)}},
- {t:'רשות הרישוי',x:'בלשונית "רישוי" מגיעות בקשות להיתר ודיווחים של הפיקוח. לכל בקשה יש מועד חוקי. מחליטים: לאשר, לפרסם הקלה או שימוש חורג, לסרב, או פטור מהיתר. אחרי כל החלטה מופיע הסבר.',el:'#side',next:true,show:function(){showTab('permits',true)}},
+ {t:'נפתח לאט לאט',x:'בהתחלה פתוחים רק מוסדות ציבור ושטחים פתוחים. כל שלב שמשלימים פותח עוד כלים: בנייה חדשה ורשות הרישוי, אחר כך התחדשות ותשתיות, ובסוף תוכנית מתאר ותחום שיפוט. הכפתורים האפורים בסרגל מחכים לשלב שלהם.',el:'#rail',next:true},
  {t:'שלבים ויעדים',x:'בלשונית "העיר" רואים את כל שלבי המשחק ואת חמשת היעדים של התוכנית האסטרטגית ל-2035. מנצחים כשכל החמישה מתקיימים בבת אחת.',el:'#side',next:true,show:function(){showTab('city',true)}},
- {t:'עוד סוגי פרויקטים',x:'בסרגל בצד יש גם התחדשות ושימור, תשתיות ברחובות, ותוכנית מתאר כוללנית שמאפשרת להסמיך את הוועדה המקומית. לחיצה על מבנה או על רחוב במפה מראה מה אפשר לעשות שם.',el:'#rail',next:true},
+ {t:'לחיצה על המפה',x:'לחיצה על מבנה או על רחוב במפה מראה מה אפשר לעשות שם, מתוך מה שכבר פתוח.',el:'#rail',next:true},
  {t:'העיר בידיים שלכם',x:'השלב הנוכחי מופיע בסרגל התחתון, ולחיצה עליו פותחת את כל השלבים. המשחק נשמר אוטומטית בכל חודש. אפשר להפעיל את ההדרכה שוב מההגדרות. בהצלחה!',el:'.bottombar',next:true,last:true}];
 function tutSeen(){try{return localStorage.getItem('hufkeda-tut')==='1'}catch(e){return false}}
 function tutStart(){TUT={on:true,i:0,tile:null,sawAct:false};S.speed=0;renderHUD();document.getElementById('settings').hidden=true;tutShow()}
@@ -2828,7 +2845,7 @@ document.querySelectorAll('[data-sp]').forEach(function(b){b.addEventListener('c
 document.getElementById('hire').addEventListener('click',function(){if(S.hire)return;S.hire={si:0,left:1};log('נפתח הליך גיוס: אישור תקן ותקציב.');renderAll()});
 document.getElementById('fire').addEventListener('click',function(){if(S.fire||S.staff<=1)return;if(busy()>=S.staff){toast('כל המתכננים באמצע תיקים. אי אפשר לפטר עכשיו.','bad');return}S.fire={si:0,left:1};S.capital=clamp(S.capital-3);log('נשלח זימון לשימוע. ועד העובדים מתקשר.','bad');renderAll()});
 document.getElementById('logbtn').addEventListener('click',function(){togglePop('drawer','logbtn')});
-document.querySelectorAll('#rail [data-cat]').forEach(function(b){b.addEventListener('click',function(){var c=b.dataset.cat;S.cat=S.cat===c?null:c;if(c==='border')S.openProd='border';else{var g=GROUPS[+c];if(g&&g[1].indexOf(S.openProd)<0)S.openProd=g[1][0]}renderProducts()})});
+document.querySelectorAll('#rail [data-cat]').forEach(function(b){b.addEventListener('click',function(){var c=b.dataset.cat;if(!unlocked(c)){lockedToast(c);return}S.cat=S.cat===c?null:c;if(c==='border')S.openProd='border';else{var g=GROUPS[+c];if(g&&g[1].indexOf(S.openProd)<0)S.openProd=g[1][0]}renderProducts()})});
 document.getElementById('fly-close').addEventListener('click',function(){S.cat=null;renderProducts()});
 document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){showTab(b.dataset.tab,true)})});
 document.getElementById('side-close').addEventListener('click',function(){setSide(false)});
