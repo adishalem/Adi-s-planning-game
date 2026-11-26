@@ -852,6 +852,37 @@ function opensAt(i){return UNLOCK.filter(function(u){return u.lv===i+1&&u.t}).ma
 function announceUnlocks(){if(S.track==='pro'||S.allOpen)return;var n=opensAt(S.level-1);if(!n.length)return;toast('נפתח עכשיו: '+n.join(', '),'good');log('עם השלב החדש נפתחו: '+n.join(', ')+'.','good');
  document.querySelectorAll('#rail [data-cat]').forEach(function(b){var u=UNLOCK.filter(function(x){return x.k===b.dataset.cat})[0];if(u&&u.lv===S.level){b.classList.add('newly');setTimeout(function(){b.classList.remove('newly')},9000)}})}
 
+
+// ---------- impact card ----------
+function citySnap(){return {hh:households(),gan:Math.max(0,Math.round(ganGap())),school:Math.max(0,Math.round(schoolGap())),ops:opsFlow().net,trust:S.trust,infra:infraIdx().all}}
+function fullSnap(p){var keep=[];(p.tiles||[]).forEach(function(t){keep.push([t,t.occ]);if(t.occ!=null)t.occ=1});var r=citySnap();keep.forEach(function(k){k[0].occ=k[1]});return r}
+function complete(p){var skip=p.type==='border'||p.program,A=skip?null:citySnap(),ty=p.type,TN=TYPES[ty]?TYPES[ty].name:ty,mo=p.m0!=null?S.month-p.m0:null,dl=p.dly||0;
+ S._holdLv=[];try{complete0(p)}finally{var held=S._holdLv;S._holdLv=null}
+ if(!skip){var B=fullSnap(p),partial=(p.tiles||[]).some(function(t){return t.occ!=null&&t.occ<1});impactCard(p,TN,A,B,mo,dl,partial)}
+ (held||[]).forEach(function(h){lvDebrief(h[0],h[1])})}
+function impactLine(ty,A,B,partial){var dh=B.hh-A.hh,dg=B.gan-A.gan,ds=B.school-A.school,dop=B.ops-A.ops;
+ if(dg>0&&B.gan>0)return 'המשפחות החדשות יחפשו מקום בגן. '+B.gan.toLocaleString('he-IL')+' ילדים יחכו לגן, וכדאי לתכנן גן קרוב לשכונה.';
+ if(ds>0&&B.school>0)return 'עוד ילדים יגיעו לבית הספר. המחסור בכיתות יגדל, ובית ספר לוקח שנתיים עד שלוש.';
+ if(dg<0)return 'רשימת ההמתנה לגנים התקצרה ב-'+(-dg).toLocaleString('he-IL')+' ילדים.'+(B.gan>0?' עדיין יש מחסור.':' אין יותר מחסור בגנים.');
+ if(ds<0)return 'המחסור בכיתות ירד.'+(B.school>0?' עדיין חסרות כיתות.':' אין יותר מחסור בכיתות.');
+ if(dh>0&&dop<0)return 'הדירות מכניסות ארנונה, אבל התושבים עולים לעירייה בשירותים יותר ממה שהם משלמים. ארנונה עסקית מאזנת את זה.';
+ if(dop>0.005)return 'הכנסה קבועה לתקציב הרגיל, בלי עוד תושבים שצריכים שירותים.'+(partial?' היא תגדל ככל שהמקום יתמלא.':'');
+ if(B.infra>A.infra)return 'מדד התשתיות עלה. הוא אחד מחמשת היעדים של התוכנית האסטרטגית.';
+ if(B.trust>A.trust)return 'פרויקט שהתושבים רואים ומרגישים. האמון עלה.';
+ return 'הפרויקט הושלם.'}
+function impactCard(p,TN,A,B,mo,dl,partial){
+ var rows=[['משקי בית',B.hh-A.hh,function(v){return signed(v,function(x){return Math.round(x).toLocaleString('he-IL')})},1],
+  ['ממתינים לגן',B.gan-A.gan,function(v){return signed(v,function(x){return Math.round(x).toLocaleString('he-IL')})},-1],
+  ['מחסור בכיתות (ילדים)',B.school-A.school,function(v){return signed(v,function(x){return Math.round(x).toLocaleString('he-IL')})},-1],
+  ['תקציב רגיל בחודש',B.ops-A.ops,function(v){return signed(v,function(x){return (Math.round(x*100)/100).toLocaleString('he-IL')+' מ׳ ₪'})},1],
+  ['אמון',B.trust-A.trust,function(v){return signed(v)},1],
+  ['מדד תשתיות',B.infra-A.infra,function(v){return signed(v,function(x){return Math.round(x*100)+'%'})},1]].filter(function(r){return Math.abs(r[1])>=(r[0]==='תקציב רגיל בחודש'?0.005:r[0]==='מדד תשתיות'?0.005:0.5)});
+ queue({who:TN,title:'הושלם: '+TN,text:(mo!=null?'מפתיחת התיק עברו '+mo+' חודשים'+(dl?', מתוכם '+dl+' חודשי עיכוב.':'.'):''),
+  build:function(mb){var w=el('div','dbf');
+   if(rows.length){w.appendChild(el('h4',null,'מה זה משנה בעיר'+(partial?', כשהמקום יתמלא':'')));var g=el('div','dbm');
+    rows.forEach(function(r){var good=r[1]*r[3]>0,c=el('div');c.appendChild(el('small',null,r[0]));c.appendChild(el('b',good?'up':'down',r[2](r[1])));g.appendChild(c)});w.appendChild(g)}
+   var ls=el('div','dbt');ls.appendChild(el('b',null,'מה זה אומר'));ls.appendChild(el('p',null,impactLine(p.type,A,B,partial)));w.appendChild(ls);mb.appendChild(w)},
+  options:[{label:'להמשיך',primary:true,fx:function(){}}]})}
 // ---------- level debrief ----------
 var DCAT={committee:'ועדות ותנאים',objections:'התנגדויות',permit:'רישוי וגורמי חוץ',money:'מכרזים, תקציב ובעלים',build:'תכנון וביצוע'};
 function dcat(id){if(id==='part')return null;if(/^(deposit|hearing|dpub)$/.test(id))return 'objections';
@@ -864,7 +895,7 @@ function lvStageStart(p,s,m,cut){p.stM0=S.month;p.stCut=cut||0;var L=lvs();if(cu
 function lvStageEnd(p,s){if(p.stM0==null||!s)return;var c=dcat(s.id),act=S.month-p.stM0,d=Math.max(0,act-((s.months||0)-(p.stCut||0)));p.stM0=null;
  if(!c)return;var L=lvs();if(d>0){L.delay[c]=(L.delay[c]||0)+d;p.dly=(p.dly||0)+d}}
 function lvDone(p){var L=lvs();L.done.push({n:TYPES[p.type]?TYPES[p.type].name:p.type,mo:p.m0!=null?S.month-p.m0:null,dly:p.dly||0,part:p.partLevel||0,js:p.just?p.just.score:null,plan:!!p.needsPlan})}
-function signed(v,f){var r=f?f(Math.abs(v)):Math.round(Math.abs(v));return (v>0?'+':v<0?'−':'')+r}
+function signed(v,f){var r=f?f(Math.abs(v)):Math.round(Math.abs(v));return (v!==0?'‎':'')+(v>0?'+':v<0?'−':'')+r}
 function lvLesson(L){var ks=Object.keys(L.delay).filter(function(k){return L.delay[k]>0}).sort(function(a,b){return L.delay[b]-L.delay[a]}),top=ks[0];
  var parts=L.done.map(function(d){return d.part}),avgP=parts.length?parts.reduce(function(a,b){return a+b},0)/parts.length:0;
  var js=L.done.filter(function(d){return d.js!=null}).map(function(d){return d.js}),avgJ=js.length?js.reduce(function(a,b){return a+b},0)/js.length:50;
@@ -876,7 +907,7 @@ function lvLesson(L){var ks=Object.keys(L.delay).filter(function(k){return L.del
  if(top==='money')return 'מכרזים, תקציבים וחתימות של בעלים לקחו את רוב הזמן. בהתחדשות עירונית נציגות דיירים מסודרת מקצרת את שלב החתימות, ובמכרז כדאי לבחור לפי איכות.';
  if(top==='permit')return 'הרישוי עיכב את השלב. בקשה חסרה וגורמי חוץ מחזירים אחורה. הסמכת הוועדה המקומית ותוכנית מתאר מקצרות את המסלול.';
  return 'הביצוע התארך: עתיקות, קבלנים או מחירים. מכרז שבוחר לפי איכות ולא רק לפי מחיר משפר את הביצוע.'}
-function lvDebrief(i){var L=lvs(),Lv=LEVELS[i],nx=LEVELS[i+1],mo=S.month-L.m0,opens=opensAt(i);
+function lvDebrief(i,Lo){if(S._holdLv){S._holdLv.push([i,S.lvs]);return}var L=Lo||lvs(),Lv=LEVELS[i],nx=LEVELS[i+1],mo=S.month-L.m0,opens=opensAt(i);
  var ev={who:'סיכום שלב '+(i+1),title:Lv.t,wide:true,text:'השלב נמשך '+mo+' חודשים, מ'+MONTHS[L.m0%12]+' '+(2027+Math.floor(L.m0/12))+' עד '+MONTHS[S.month%12]+' '+(2027+Math.floor(S.month/12))+'.',
   build:function(mb){var w=el('div','dbf');
    if(L.done.length){var h=el('h4',null,'תיקים שהושלמו');w.appendChild(h);var ul=el('ul','dbl');L.done.forEach(function(d){var li=el('li');li.appendChild(el('b',null,d.n));li.appendChild(el('span',null,(d.mo!=null?d.mo+' חודשים':'')+(d.dly?', מתוכם '+d.dly+' עיכובים':'')+(d.plan?', עם שינוי ייעוד':'')));ul.appendChild(li)});w.appendChild(ul)}
@@ -1135,7 +1166,7 @@ function finishStage(p){var s=p.stages[p.si];lvStageEnd(p,s);
  p.si++;startStage(p)}
 function goTo(p,id){if(id==='prep')lvs().back++;var i=p.stages.findIndex(function(s){return s.id===id});if(i<0&&id==='prep')i=p.stages.findIndex(function(s){return s.id==='hprep'||s.id==='mexist'});p.si=Math.max(0,i);startStage(p)}
 function delay(p,n){p.left=n;p.total=n}
-function complete(p){
+function complete0(p){
  lvDone(p);p.done=true;S.projects=S.projects.filter(function(q){return q!==p});S.lastDoneMonth=S.month;S.lastDoneTile=p.tiles[0];
  if((p.tq||0)>=2){S.trust=clamp(S.trust+Math.min(3,Math.floor(p.tq/2)));log('המכרז האיכותי השתלם: ביצוע טוב, אמון עולה.','good')}
  if(p.type==='border'){p.tiles.forEach(function(t){t.project=null});
