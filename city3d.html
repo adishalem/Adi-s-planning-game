@@ -1122,7 +1122,7 @@ function pick(a){return a[Math.floor(Math.random()*a.length)]}
 function chance(k){return Math.random()<k}
 function outfit(kind,labor){var o={fem:chance(.5),skin:pick(SKIN),hair:pick(HAIR),hs:'short',top:0,arms:0,bottom:0,legs:0,shoes:0x222222,sleeve:false,shorts:false,skirt:-1,tie:-1,vest:-1,hat:-1,kippa:-1,bag:-1,purse:-1,beard:-1,glasses:-1,phone:false,shop:-1,h:.95+Math.random()*.1},st=kind;
  if(kind==='work')st=labor?'labor':pick(['suit','suit','formal','casual','casual','style']);
- else if(/^(stroll|mall|park|sit|wait|parent|scoot|lane)$/.test(kind))st=pick(['casual','casual','casual','style','style','elder','formal','suit']);
+ else if(/^(stroll|mall|park|sit|wait|parent|scoot|lane)$/.test(kind))st=pick(['casual','casual','casual','style','style','elder','formal','suit']);if(/^(stroll|wait|lane)$/.test(kind)&&chance(.1))st='soldier';
  else if(kind==='play')st='tot';
  if(kind==='scoot'&&st==='elder')st='casual';
  var F=o.fem;o.hs=F?pick(['long','long','pony','bun','curly','short']):pick(['short','short','short','curly','bald']);if(!F&&chance(.3))o.beard=o.hair;
@@ -1135,6 +1135,7 @@ function outfit(kind,labor){var o={fem:chance(.5),skin:pick(SKIN),hair:pick(HAIR
  else if(st==='kid'){o.h=.64+Math.random()*.16;o.beard=-1;o.top=pick(SCHOOL);o.sleeve=true;o.arms=o.skin;if(F&&chance(.5)){o.skirt=o.bottom=pick([0x1f2f45,0x2c3e5a,0x8e5bb5]);o.legs=o.skin}else if(chance(.6)){o.shorts=true;o.bottom=pick(JEANS);o.legs=o.skin}else o.bottom=o.legs=pick(JEANS);o.bag=pick(KID);o.shoes=pick(KID.concat([0xf4f4f4]));if(o.hs==='bald')o.hs='short'}
  else if(st==='tot'){o.h=.48+Math.random()*.1;o.beard=-1;o.top=pick(KID);o.sleeve=true;o.arms=o.skin;o.shorts=true;o.bottom=pick(KID);o.legs=o.skin;o.shoes=pick(KID);if(o.hs==='bald'||o.hs==='bun')o.hs='short'}
  else if(st==='waiter'){o.top=o.arms=0xf4f4f4;o.bottom=o.legs=0x111111;o.vest=0x1a1a1a;o.shoes=0x111111}
+ else if(st==='soldier'){o.top=o.arms=o.bottom=o.legs=pick([0x4b5232,0x50553a,0x464b2e]);o.soldier=true;o.beret=chance(.5)?pick([0x4b5232,0x7a1f2b,0x3a3f2a,0x5a2d6e]):-1;o.hat=-1;o.h=.93+Math.random()*.09}
  else if(st==='hike'){o.top=pick(TOPS);o.sleeve=true;o.arms=o.skin;o.shorts=chance(.5);o.bottom=pick(CHINO);o.legs=o.shorts?o.skin:o.bottom;if(chance(.6))o.hat=pick([0xd8cfb0,0x6b8e23,0x2f6fd6]);o.bag=pick([0x6b8e23,0xe8443a,0x2f6fd6,0x3a3f45]);o.shoes=0x4a3020;if(chance(.4))o.glasses=0x050505}
  if(o.hat>=0||o.helmet)o.kippa=-1;
  if(/^(stroll|wait|mall|sit|work|lane)$/.test(kind)&&st!=='labor'&&chance(.22))o.phone=true;
@@ -1400,6 +1401,145 @@ function drawChars(dt){if(!PPL.length)return;skBuild();SK.timer-=dt;if(SK.timer<
    if(p.stroller&&!p.sit){sh=-.95;el=-.45}
    if(p.o.phone&&k===1&&!p.sit){sh=-.35;el=-1.55}
    B[k?3:1].rotation.set(hip,0,0);B[k?4:2].rotation.set(knee,0,0);B[k?7:5].rotation.set(sh,0,sg*.06);B[k?8:6].rotation.set(el,0,0)}})}
+
+// =================== PAWN: abstract townsfolk. A round head with big eyes and a small smile, a hat by type, a coloured cylinder body. They hop. ===================
+// PAWN.make(o) -> {g, body, head, parts}; PAWN.pose(p, {walk, ph, t, i}). Metres; feet at y=0, facing +z.
+var PAWN=(function(){
+ var G=null,_c=new THREE.Color();
+ function lin(h){return _c.setHex(h).convertSRGBToLinear().clone()}
+ function mat(h,o){o=o||{};return new THREE.MeshStandardMaterial({color:lin(h),roughness:o.r==null?.55:o.r,side:o.ds?THREE.DoubleSide:THREE.FrontSide})}
+ function lt(pr,seg,ps,pl){return new THREE.LatheGeometry(pr.map(function(q){return new THREE.Vector2(q[0],q[1])}),seg||32,ps||0,pl||Math.PI*2)}
+ // body: a smooth rounded cylinder (radius 1, height 1, scaled per person); the head sits on top
+ var BODY=[[.001,0],[.7,0],[.92,.035],[.99,.1],[1,.2],[1,.8],[.97,.9],[.86,.96],[.6,.995],[.001,1]];
+ function geos(){if(G)return G;G={};
+  G.body=lt(BODY,40);
+  G.band=lt([[1.012,.0],[1.012,1]].map(function(q,i){return q}),40);
+  G.stripe=lt([[1.008,.36],[1.008,.98]],6,-.2,.4);               // the shirt front of a suit
+  G.tie=lt([[1.012,.52],[1.012,.92]],4,-.06,.12);
+  G.hvBand=lt([[1.015,.0],[1.015,.08]],40);                        // reflective band of a hi-vis vest
+  G.head=new THREE.SphereGeometry(1,32,24);
+  G.eyeW=new THREE.SphereGeometry(1,20,16);G.eyeP=new THREE.SphereGeometry(1,16,12);G.eyeH=new THREE.SphereGeometry(1,10,8);
+  var sm=new THREE.TorusGeometry(1,.17,8,20,Math.PI*.8);sm.rotateZ(Math.PI*1.1);G.smile=sm;
+  // hats, built around a head of radius 1 centred at the origin
+  G.hard=new THREE.SphereGeometry(1.02,28,14,0,Math.PI*2,0,Math.PI/2);G.hard.scale(1,.82,1.06);G.hard.translate(0,.4,0);
+  G.hardBrim=new THREE.CylinderGeometry(1.2,1.2,.05,32);G.hardBrim.scale(1,1,1.12);G.hardBrim.translate(0,.42,.1);
+  G.hardRidge=new THREE.TorusGeometry(.98,.07,8,24,Math.PI);G.hardRidge.rotateY(Math.PI/2);G.hardRidge.scale(1,.82,1);G.hardRidge.translate(0,.4,0);
+  G.cap=new THREE.SphereGeometry(1.0,28,14,0,Math.PI*2,0,Math.PI/2);G.cap.scale(1,.75,1.04);G.cap.translate(0,.38,0);
+  G.visor=new THREE.CylinderGeometry(.85,.85,.05,24,1,false,-Math.PI/2,Math.PI);G.visor.scale(1,1,.9);G.visor.translate(0,.42,.62);
+  G.capButton=new THREE.SphereGeometry(.09,10,8);G.capButton.translate(0,1.13,0);
+  G.tembel=lt([[1.16,0],[1.1,.12],[.98,.4],[.76,.72],[.42,.95],[.12,1.04],[.001,1.05]],32);G.tembel.translate(0,.32,0);
+  G.straw=new THREE.CylinderGeometry(1.75,1.75,.05,40);G.straw.translate(0,.46,0);
+  G.strawTop=lt([[1.02,0],[1.0,.35],[.92,.52],[.001,.56]],32);G.strawTop.scale(.95,1,.95);G.strawTop.translate(0,.46,0);
+  G.strawBand=new THREE.CylinderGeometry(1.03,1.03,.14,32,1,true);G.strawBand.scale(.95,1,.95);G.strawBand.translate(0,.56,0);
+  G.flower=new THREE.SphereGeometry(.13,10,8);
+  G.beret=new THREE.SphereGeometry(1,28,16);G.beret.scale(1.06,.36,1.06);G.beret.rotateZ(.22);G.beret.translate(-.1,.8,-.02);
+  G.kippa=new THREE.SphereGeometry(.62,20,8,0,Math.PI*2,0,.55);G.kippa.translate(0,.4,-.25);
+  G.hair=new THREE.SphereGeometry(1.04,28,16,0,Math.PI*2,0,Math.PI*.42);G.hair.rotateX(-.45);
+  G.bun=new THREE.SphereGeometry(.36,16,12);G.bun.translate(0,.75,-.65);
+  G.pony=new THREE.SphereGeometry(.3,14,10);G.pony.scale(1,1.6,1);G.pony.translate(0,.1,-1.08);
+  return G}
+ // o: {body, band?, stripe?, tie?, hv?, skin, hat:'hard'|'cap'|'tembel'|'straw'|'beret'|'kippa'|null, hatC, hair, hairStyle:'short'|'bun'|'pony'|null, h (height), w (width)}
+ function make(o){var g=geos(),root=new THREE.Group(),bob=new THREE.Group();root.add(bob);
+  var H=o.h||1.0,W=o.w||.2,R=o.head||.19,P=[];
+  var body=new THREE.Mesh(g.body,mat(o.body,{r:.6}));body.scale.set(W,H,W);body.castShadow=body.receiveShadow=true;bob.add(body);
+  if(o.band!=null){var b=new THREE.Mesh(g.band,mat(o.band,{r:.6}));b.scale.set(W,H*(o.bandH||.42),W);b.castShadow=true;bob.add(b)}
+  if(o.stripe!=null){var st=new THREE.Mesh(g.stripe,mat(o.stripe,{r:.5}));st.scale.set(W,H,W);bob.add(st)}
+  if(o.tie!=null){var ti=new THREE.Mesh(g.tie,mat(o.tie,{r:.5}));ti.scale.set(W*1.004,H,W*1.004);bob.add(ti)}
+  if(o.hv!=null)[.48,.66].forEach(function(y){var hb=new THREE.Mesh(g.hvBand,mat(o.hv,{r:.35}));hb.scale.set(W,H,W);hb.position.y=H*y;bob.add(hb)});
+  var head=new THREE.Group();head.position.y=H+R*.92;bob.add(head);
+  var hm=new THREE.Mesh(g.head,mat(o.skin,{r:.6}));hm.scale.setScalar(R);hm.castShadow=true;head.add(hm);
+  // big eyes with a highlight, a small smile
+  [-1,1].forEach(function(s){var w=new THREE.Mesh(g.eyeW,mat(0xffffff,{r:.3}));w.scale.set(R*.2,R*.26,R*.1);w.position.set(s*R*.34,R*.12,R*.9);head.add(w);
+   var p=new THREE.Mesh(g.eyeP,mat(0x231a14,{r:.3}));p.scale.set(R*.12,R*.16,R*.07);p.position.set(s*R*.33,R*.1,R*.97);head.add(p);
+   var hl=new THREE.Mesh(g.eyeH,mat(0xffffff,{r:.2}));hl.scale.setScalar(R*.04);hl.position.set(s*R*.33+R*.04,R*.17,R*1.02);head.add(hl)});
+  var sm=new THREE.Mesh(g.smile,mat(0x7a3b2e,{r:.5}));sm.scale.setScalar(R*.16);sm.position.set(0,-R*.3,R*.93);sm.rotation.x=-.25;head.add(sm);
+  function hatPart(geo,h,scale,ds){var m=new THREE.Mesh(geo,mat(h,{ds:ds}));m.scale.setScalar(scale||R);m.castShadow=true;head.add(m);return m}
+  if(o.hairStyle&&!(o.hat&&o.hat!=='kippa'&&o.hairStyle==='short')){var hr=hatPart(g.hair,o.hair);if(o.hairStyle==='bun'&&!o.hat)hatPart(g.bun,o.hair);if(o.hairStyle==='pony')hatPart(g.pony,o.hair)}
+  switch(o.hat){
+   case 'hard':hatPart(g.hard,o.hatC);hatPart(g.hardBrim,o.hatC);hatPart(g.hardRidge,o.hatC);break;
+   case 'cap':hatPart(g.cap,o.hatC);hatPart(g.visor,o.hatC,null,true);hatPart(g.capButton,o.hatC);break;
+   case 'tembel':var t=hatPart(g.tembel,o.hatC);t.rotation.z=.08;break;
+   case 'straw':hatPart(g.straw,0xe3c98a,null,true);hatPart(g.strawTop,0xe3c98a);hatPart(g.strawBand,o.hatC,null,true);
+    [0xff5d73,0xffd23f,0xffffff].forEach(function(fc,k){var f=hatPart(g.flower,fc);var a=.35+k*.32;f.position.set(Math.sin(a)*R*.99,R*.56,Math.cos(a)*R*.99)});break;
+   case 'beret':hatPart(g.beret,o.hatC);break;
+   case 'kippa':hatPart(g.kippa,o.hatC);break}
+  return {g:root,bob:bob,body:body,head:head,H:H,R:R}}
+ // hopping: small jumps with a squash on landing; standing: a slow breath
+ function pose(p,s){var t=s.t||0,i=s.i||0;
+  if(s.walk){var ph=s.ph||0,u=Math.abs(Math.sin(ph)),land=1-u;p.bob.position.y=u*.09;var sq=1-.07*Math.pow(land,6);p.bob.scale.set(1/Math.sqrt(sq),sq,1/Math.sqrt(sq));p.bob.rotation.x=.06;p.head.rotation.z=Math.sin(ph)*.05}
+  else{p.bob.position.y=0;var br=1+.012*Math.sin(t*2+i);p.bob.scale.set(1,br,1);p.bob.rotation.x=0;p.head.rotation.z=Math.sin(t*.7+i)*.04}}
+ return {make:make,pose:pose,geos:geos}})();
+
+// =================== townsfolk as abstract figures: a head with big eyes and a smile, a hat by type, a coloured cylinder body; they hop ===================
+// Instanced: one mesh per part (body, head, eyes, each hat...), so hundreds of people cost a few dozen draw calls.
+var PWG=null,PMAT=null,PMATD=null,_pe=new THREE.Euler(0,0,0,'YXZ'),_pm0=new THREE.Matrix4(),_pmt=new THREE.Matrix4();
+var PW_BRIGHT=[0xff5d73,0x2f6fd6,0x24b47e,0xff8a3d,0x8e5bb5];
+function pawnOf(p){var o=p.o,k=p.kind,pw={skin:o.skin,hair:o.hair,hairStyle:o.hs==='bald'?null:(o.hs==='long'||o.hs==='pony')?'pony':o.hs==='bun'?'bun':'short',hat:null,hatC:0,body:o.top,H:1,W:.2,R:.19,flower:pick(PW_BRIGHT)};
+ if(o.h<.6){pw.H=.38;pw.W=.13;pw.R=.15}else if(o.h<.85){pw.H=.6;pw.W=.15;pw.R=.165}else if(o.slow)pw.H=.94;
+ if(o.helmet){pw.body=o.vest;pw.hv=0xdfe3e6;pw.hat='hard';pw.hatC=o.hat;pw.hairStyle='short'}
+ else if(o.soldier){pw.body=o.top;if(o.beret>=0){pw.hat='beret';pw.hatC=o.beret}}
+ else if(k==='waiter'){pw.body=0xf4f4f2;pw.band=0x1c1c1f}
+ else if(o.tie>=0||(o.top===o.bottom&&SUIT.indexOf(o.top)>=0)){pw.body=SUIT.indexOf(o.top)>=0?o.top:0x1f2228;pw.stripe=0xf4f4f2;if(o.tie>=0)pw.tie=o.tie}
+ else if(o.slow&&chance(.7)){if(o.fem){pw.hat='straw';pw.hatC=pick(PW_BRIGHT)}else{pw.hat='tembel';pw.hatC=pick([0x2f5fa8,0xc8b48a,0x3d6b9a])}}
+ else if(k==='hike'){pw.hat='tembel';pw.hatC=pick([0xc8b48a,0x6b8e23])}
+ else if(o.hat>=0){pw.hat='cap';pw.hatC=o.hat}
+ if(o.kippa>=0&&!pw.hat){pw.hat='kippa';pw.hatC=o.kippa}
+ return pw}
+function pawnGeos(){if(PWG)return PWG;var g=PAWN.geos();function tf(geo,fn){var c=geo.clone();fn(c);return c}
+ var eyes=function(sx,sy,sz,x,y,z,dx){return mg([-1,1].map(function(s){return tf(g.eyeW,function(c){c.scale(sx,sy,sz);c.translate(s*x+(dx||0),y,z)})}))};
+ var eyeP=mg([-1,1].map(function(s){return tf(g.eyeP,function(c){c.scale(.12,.16,.07);c.translate(s*.33,.1,.97)})})),eyeH=mg([-1,1].map(function(s){return tf(g.eyeH,function(c){c.scale(.04,.04,.04);c.translate(s*.33+.04,.17,1.02)})}));
+ var flowers=mg([0,1,2].map(function(k){var a=.35+k*.32;return tf(g.flower,function(c){c.translate(Math.sin(a)*.99,.56,Math.cos(a)*.99)})}));
+ var always=function(){return true},hat=function(h){return function(pw){return pw.hat===h}};
+ PWG=[
+  {n:'body',g:g.body,sp:'body',col:function(pw){return pw.body},use:always,sh:true},
+  {n:'band',g:g.band,sp:'band',col:function(pw){return pw.band},use:function(pw){return pw.band!=null},sh:true},
+  {n:'stripe',g:g.stripe,sp:'body',col:function(pw){return pw.stripe},use:function(pw){return pw.stripe!=null}},
+  {n:'tie',g:g.tie,sp:'tie',col:function(pw){return pw.tie},use:function(pw){return pw.tie!=null}},
+  {n:'hv1',g:g.hvBand,sp:'hv1',col:function(pw){return pw.hv},use:function(pw){return pw.hv!=null}},
+  {n:'hv2',g:g.hvBand,sp:'hv2',col:function(pw){return pw.hv},use:function(pw){return pw.hv!=null}},
+  {n:'head',g:g.head,sp:'head',col:function(pw){return pw.skin},use:always,sh:true},
+  {n:'eyeW',g:eyes(.2,.26,.1,.34,.12,.9),sp:'head',col:function(){return 0xffffff},use:always},
+  {n:'eyeP',g:eyeP,sp:'head',col:function(){return 0x231a14},use:always},
+  {n:'eyeH',g:eyeH,sp:'head',col:function(){return 0xffffff},use:always},
+  {n:'smile',g:tf(g.smile,function(c){c.scale(.16,.16,.16);c.rotateX(-.25);c.translate(0,-.3,.93)}),sp:'head',col:function(){return 0x7a3b2e},use:always},
+  {n:'hair',g:g.hair,sp:'head',col:function(pw){return pw.hair},use:function(pw){return !!pw.hairStyle&&!(pw.hat&&pw.hat!=='kippa'&&pw.hairStyle==='short')},sh:true},
+  {n:'bun',g:g.bun,sp:'head',col:function(pw){return pw.hair},use:function(pw){return pw.hairStyle==='bun'&&!pw.hat}},
+  {n:'pony',g:g.pony,sp:'head',col:function(pw){return pw.hair},use:function(pw){return pw.hairStyle==='pony'}},
+  {n:'hard',g:mg([g.hard,g.hardBrim,g.hardRidge]),sp:'head',col:function(pw){return pw.hatC},use:hat('hard'),sh:true},
+  {n:'cap',g:mg([g.cap,g.visor,g.capButton]),sp:'head',col:function(pw){return pw.hatC},use:hat('cap'),ds:true,sh:true},
+  {n:'tembel',g:g.tembel,sp:'head',col:function(pw){return pw.hatC},use:hat('tembel'),sh:true},
+  {n:'straw',g:mg([g.straw,g.strawTop]),sp:'head',col:function(){return 0xe3c98a},use:hat('straw'),ds:true,sh:true},
+  {n:'strawBand',g:g.strawBand,sp:'head',col:function(pw){return pw.hatC},use:hat('straw'),ds:true},
+  {n:'flowers',g:flowers,sp:'head',col:function(pw){return pw.flower},use:hat('straw')},
+  {n:'beret',g:g.beret,sp:'head',col:function(pw){return pw.hatC},use:hat('beret')},
+  {n:'kippa',g:g.kippa,sp:'head',col:function(pw){return pw.hatC},use:hat('kippa')},
+  {n:'stroller',g:mg([bx(.5,.35,.75,0,.55,.95),sph(.27,0,.82,1.12,1,.85,.9),bx(.04,.6,.04,-.2,.75,.55),bx(.04,.6,.04,.2,.75,.55),bx(.44,.04,.04,0,1.02,.5),wh(.09,-.24,.09,.68),wh(.09,.24,.09,.68),wh(.1,-.24,.1,1.25),wh(.1,.24,.1,1.25)]),sp:'raw',col:function(){return 0x2f3a48},use:function(pw,p){return p.stroller},sh:true},
+  {n:'scooter',g:mg([bx(.16,.05,.75,0,.1,.1),cy(.022,.022,1,0,.6,.42),bx(.42,.03,.03,0,1.1,.42),wh(.08,0,.08,.45),wh(.08,0,.08,-.25)]),sp:'raw',col:function(){return 0x2a2d31},use:function(pw,p){return p.scoot}}];
+ return PWG}
+function buildBodies(){var L=pawnGeos();if(!PMAT){PMAT=new THREE.MeshStandardMaterial({roughness:.55});PMATD=new THREE.MeshStandardMaterial({roughness:.55,side:THREE.DoubleSide})}
+ PPL.forEach(function(p){var pw=p.pw=pawnOf(p),H=pw.H,W=pw.W,R=pw.R,S=function(a,b,c){return new THREE.Matrix4().makeScale(a,b,c)};
+  p.pm={body:S(W,H,W),band:S(W,H*.45,W),tie:S(W*1.004,H,W*1.004),hv1:new THREE.Matrix4().makeTranslation(0,H*.48,0).multiply(S(W,H,W)),hv2:new THREE.Matrix4().makeTranslation(0,H*.66,0).multiply(S(W,H,W)),
+   head:new THREE.Matrix4().makeTranslation(0,H+.92*R,0).multiply(S(R,R,R)),raw:new THREE.Matrix4()};p.pidx={}});
+ PM=[];L.forEach(function(d){var users=PPL.filter(function(p){return d.use(p.pw,p)});if(!users.length)return;var im=new THREE.InstancedMesh(d.g,d.ds?PMATD:PMAT,users.length);im.castShadow=!!d.sh;im.receiveShadow=true;im.frustumCulled=false;im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  users.forEach(function(p,k){p.pidx[d.n]=k;_c.setHex(d.col(p.pw,p));im.setColorAt(k,_c);im.setMatrixAt(k,ZERO)});addRaw(im);PM.push({im:im,n:d.n,sp:d.sp})});
+ PPL.forEach(function(p){p._hid=true;p.parts=PM.filter(function(q){return p.pidx[q.n]!=null})})}
+function drawPeople(t){if(!PM)return;FRAME++;
+ PPL.forEach(function(p,i){var P=p.parts;
+  var cdx=p.x-cam.position.x,cdz=p.z-cam.position.z,far=cdx*cdx+cdz*cdz>90000;if(!p.vis||far){if(!p._hid){P.forEach(function(q){q.im.setMatrixAt(p.pidx[q.n],ZERO)});p._hid=true}return}
+  var walking=p.st==='walk'&&!p.scoot;if(!walking&&!p.scoot&&!p._hid&&(FRAME+i)%4)return;p._hid=false;
+  var y0,hop=0,sq=1,lean=0;
+  if(p.sit){y0=p.y+.44;sq=.86}else{y0=H(p.x,p.z)+sidewalkLift(p.x,p.z)+(p.scoot?.13:0);if(walking&&!p.stroller){var u=Math.abs(Math.sin(p.ph));hop=u*(p.pw.H<.7?.06:.09);sq=1-.07*Math.pow(1-u,6);lean=.06}}
+  _p.set(p.x,y0,p.z);_q.setFromAxisAngle(_y,p.yaw);_s.set(1,1,1);_pm0.compose(_p,_q,_s);
+  _p.y+=hop;_pe.set(lean,p.yaw,0);_q.setFromEuler(_pe);var k=1/Math.sqrt(sq);_s.set(k,sq,k);_m.compose(_p,_q,_s);
+  P.forEach(function(q){_pmt.multiplyMatrices(q.sp==='raw'?_pm0:_m,p.pm[q.sp]);q.im.setMatrixAt(p.pidx[q.n],_pmt)})});
+ PM.forEach(function(q){q.im.instanceMatrix.needsUpdate=true});
+ if(DM){DOGS.forEach(function(d,i){var ddx=d.x-cam.position.x,ddz=d.z-cam.position.z;if(!d.vis||ddx*ddx+ddz*ddz>90000){DM.body.setMatrixAt(i,ZERO);DM.head.setMatrixAt(i,ZERO);for(var k=0;k<4;k++)DM.leg.setMatrixAt(i*4+k,ZERO);return}
+   var moving=d.owner.st==='walk';_p.set(d.x,H(d.x,d.z)+sidewalkLift(d.x,d.z),d.z);_q.setFromAxisAngle(_y,d.yaw);warpPose(_p,_q,false,d.owner.anc);_s.set(d.s,d.s,d.s);_m.compose(_p,_q,_s);DM.body.setMatrixAt(i,_m);DM.head.setMatrixAt(i,_m);
+   [[-.08,.2],[.08,.2],[-.08,-.2],[.08,-.2]].forEach(function(o,k){var a=moving?Math.sin(d.ph+(k===0||k===3?0:Math.PI))*.6:0;_l.multiplyMatrices(_m,_t.makeTranslation(o[0],.3,o[1]));_l.multiply(_r.makeRotationX(a));DM.leg.setMatrixAt(i*4+k,_l)})});
+  DM.body.instanceMatrix.needsUpdate=DM.head.instanceMatrix.needsUpdate=DM.leg.instanceMatrix.needsUpdate=true}}
+// the old rigged near-camera bodies are not used with the abstract figures
+function drawChars(){}
+function resetChars(){}
 
 loadChars();build();requestAnimationFrame(loop);
 window.__city3d={S:S,R:R,sp:function(d){stepPeople(d)},dp:function(t){drawPeople(t)},mv:function(d){moveVehicles(d)},build:build,applyTime:applyTime,frame:frame,flyTo:flyTo,cam:cam,ctl:ctl,PPL:function(){return PPL},setClock:function(m){CLOCK=m},G:function(){return G}};
