@@ -1709,7 +1709,7 @@ function labFit(){var w=MC.clientWidth,h=MC.clientHeight,pw=w>700?330:0;LAB.sc=M
 function mx(x){return LAB.ox+x*LAB.sc}function my(z){return LAB.oy+z*LAB.sc}
 function hexs(h){return '#'+('000000'+h.toString(16)).slice(-6)}
 function drawMap(){if(!MC||LAB.view!=='map')return;var dpr=Math.min(2,window.devicePixelRatio||1),w=MC.clientWidth,h=MC.clientHeight;if(MC.width!==w*dpr){MC.width=w*dpr;MC.height=h*dpr}var g=MG;g.setTransform(dpr,0,0,dpr,0,0);
- var dark=matchMedia('(prefers-color-scheme: dark)').matches;g.fillStyle=dark?'#1d2126':'#eef0ec';g.fillRect(0,0,w,h);var L=LAB.layers,s=LAB.sc;
+ var dark=false;g.fillStyle=dark?'#1d2126':'#eef0ec';g.fillRect(0,0,w,h);var L=LAB.layers,s=LAB.sc;
  if(L.reg){for(var k=0;k<GN*GN;k++){var v=RAST0[k];if(v===-6&&ZCELL&&ZCELL[k]>=0)v=ZCELL[k];if(v<0&&v!==-5)continue;var c=cellXZ(k);g.fillStyle=v===-5?'#9fc98a':hexs(TCOL[REG[v].type]||0xcccccc);g.fillRect(mx(c[0]-CELLM/2),my(c[1]-CELLM/2),CELLM*s+.6,CELLM*s+.6)}}
  // boundary
  g.strokeStyle='#2f6fd6';g.lineWidth=1.5;g.setLineDash([6,4]);g.beginPath();for(var a=0;a<=360;a+=2){var t=a/180*Math.PI,r=boundaryR(t),px=CENTER[0]+Math.cos(t)*r,pz=CENTER[1]+Math.sin(t)*r;a?g.lineTo(mx(px),my(pz)):g.moveTo(mx(px),my(pz))}g.stroke();g.setLineDash([]);
@@ -1743,4 +1743,15 @@ window.__city3d={S:S,R:R,sp:function(d){stepPeople(d)},dp:function(t){drawPeople
 })();
 </script>
 
+<style>:root{--panel:rgba(255,255,255,.92);--line:rgba(0,0,0,.12);--ink:#1f2328;--muted:#5b636b;color-scheme:light}.lab{box-shadow:0 6px 24px rgba(0,0,0,.1)}</style><style>
+.labnav{position:fixed;z-index:30;top:12px;left:12px;display:flex;gap:2px;align-items:center;padding:4px;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.12);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);font:500 13px/1 Rubik,system-ui,Arial,sans-serif;max-width:calc(100vw - 24px);overflow-x:auto;box-sizing:border-box;scrollbar-width:none}
+.labnav::-webkit-scrollbar{display:none}
+.labnav a{color:#1f2328;text-decoration:none;padding:0 10px;border-radius:8px;white-space:nowrap;min-height:34px;display:flex;align-items:center}
+.labnav a:hover{background:rgba(0,0,0,.06)}
+.labnav a[aria-current="page"]{background:#f5c400;font-weight:600}
+.labnav a:focus-visible{outline:2px solid #1f2328;outline-offset:1px}
+.labnav .sep{width:1px;height:20px;background:rgba(0,0,0,.14);margin:0 4px;flex:none}
+@media (max-width:1150px){.labnav{right:12px}.lab,.panel{top:62px!important;max-height:calc(100vh - 74px)!important}}
+@media (max-width:600px){.lab{top:auto!important;max-height:46vh!important}}
+</style><nav class="labnav" aria-label="מעבר בין המעבדות"><a href="labs.html">כל המעבדות</a><span class="sep" aria-hidden="true"></span><a href="city-lab.html" aria-current="page">מבנה העיר</a><a href="buildings-lab.html">בניינים</a><a href="pawn-lab.html">דמויות</a><a href="people-lab.html">דמויות מפורטות</a><span class="sep" aria-hidden="true"></span><a href="index.html">דף הבית</a></nav>
 </html>

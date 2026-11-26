@@ -35,17 +35,17 @@ body{margin:0;background:var(--sky);color:var(--ink);font-family:var(--f-body);d
 @media (max-width:600px){.hud{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:10px 12px;gap:7px;max-height:46vh}.sub,.help{display:none}.hud h1{font-size:1.15rem}}
 .hud{display:none!important}
 .lab{position:fixed;z-index:5;top:12px;right:12px;width:min(310px,calc(100vw - 32px));max-height:calc(100vh - 24px);overflow-y:auto;overflow-x:hidden;box-sizing:border-box;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--ink)}
-.lab h1{font-size:1.05rem;margin:0 0 4px}.lab h2{font-size:.95rem;margin:12px 0 4px;color:#ffd23d}.lab h3{font-size:.82rem;margin:8px 0 3px;color:var(--muted);font-weight:600}.lab p{margin:0 0 8px;font-size:.8rem;color:var(--muted);line-height:1.45}
+.lab h1{font-size:1.05rem;margin:0 0 4px}.lab h2{font-size:.95rem;margin:12px 0 4px;color:#7a5600}.lab h3{font-size:.82rem;margin:8px 0 3px;color:var(--muted);font-weight:600}.lab p{margin:0 0 8px;font-size:.8rem;color:var(--muted);line-height:1.45}
 .lab section{border-top:1px solid var(--line);margin-top:10px;padding-top:4px}
 .lab .r{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:4px 0}.lab label{font-size:.8rem}
 .lab button{font:inherit;font-size:.78rem;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:5px 8px;cursor:pointer;min-height:32px}
 .lab button[aria-pressed="true"],.lab button.pri{background:#f5c400;color:#1f2328;border-color:transparent;font-weight:600}
-.lab button.sw{width:30px;min-height:30px;padding:0;border:2px solid rgba(255,255,255,.25)}.lab button.sw[aria-pressed="true"]{border-color:#ffd23d;box-shadow:0 0 0 2px #ffd23d}
+.lab button.sw{width:30px;min-height:30px;padding:0;border:2px solid rgba(0,0,0,.18)}.lab button.sw[aria-pressed="true"]{border-color:#1f2328;box-shadow:0 0 0 2px #f5c400}
 .lab button.sw[data-wall=""]{width:auto;padding:0 8px}
 .lab button:focus-visible,.lab input:focus-visible,.lab select:focus-visible{outline:2px solid #f5c400;outline-offset:2px}
-.lab select,.lab input[type=text]{font:inherit;font-size:.8rem;padding:4px 6px;border-radius:7px;border:1px solid var(--line);background:rgba(0,0,0,.2);color:var(--ink)}
+.lab select,.lab input[type=text]{font:inherit;font-size:.8rem;padding:4px 6px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink)}
 .lab input[type=range]{width:120px}.lab .v{min-width:2.2em;font-weight:600;font-size:.8rem}
-.lab .msg{font-size:.78rem;color:#ffd23d;min-height:1em;word-break:break-all}
+.lab .msg{font-size:.78rem;color:#7a5600;min-height:1em;word-break:break-all}
 @media (max-width:600px){.lab{top:auto;bottom:10px;max-height:48vh}}
 </style>
 <canvas id="c" aria-label="העיר בתלת ממד"></canvas>
@@ -1819,4 +1819,15 @@ window.__city3d={S:S,R:R,sp:function(d){stepPeople(d)},dp:function(t){drawPeople
 })();
 </script>
 
+<style>:root{--panel:rgba(255,255,255,.92);--line:rgba(0,0,0,.12);--ink:#1f2328;--muted:#5b636b;color-scheme:light}.lab{box-shadow:0 6px 24px rgba(0,0,0,.1)}</style><style>
+.labnav{position:fixed;z-index:30;top:12px;left:12px;display:flex;gap:2px;align-items:center;padding:4px;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.12);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);font:500 13px/1 Rubik,system-ui,Arial,sans-serif;max-width:calc(100vw - 24px);overflow-x:auto;box-sizing:border-box;scrollbar-width:none}
+.labnav::-webkit-scrollbar{display:none}
+.labnav a{color:#1f2328;text-decoration:none;padding:0 10px;border-radius:8px;white-space:nowrap;min-height:34px;display:flex;align-items:center}
+.labnav a:hover{background:rgba(0,0,0,.06)}
+.labnav a[aria-current="page"]{background:#f5c400;font-weight:600}
+.labnav a:focus-visible{outline:2px solid #1f2328;outline-offset:1px}
+.labnav .sep{width:1px;height:20px;background:rgba(0,0,0,.14);margin:0 4px;flex:none}
+@media (max-width:1150px){.labnav{right:12px}.lab,.panel{top:62px!important;max-height:calc(100vh - 74px)!important}}
+@media (max-width:600px){.lab{top:auto!important;max-height:46vh!important}}
+</style><nav class="labnav" aria-label="מעבר בין המעבדות"><a href="labs.html">כל המעבדות</a><span class="sep" aria-hidden="true"></span><a href="city-lab.html">מבנה העיר</a><a href="buildings-lab.html" aria-current="page">בניינים</a><a href="pawn-lab.html">דמויות</a><a href="people-lab.html">דמויות מפורטות</a><span class="sep" aria-hidden="true"></span><a href="index.html">דף הבית</a></nav>
 </html>

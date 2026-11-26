@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="he" dir="rtl">
+<html lang="he" dir="rtl" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -126,7 +126,7 @@ function role(r){var o={skin:pick(SKIN),hair:pick(HAIR),hairStyle:pick(['short',
 var ROLES=['worker','suit','casual','soldier','grandma','kid','casual','grandpa','toddler','soldier','waiter','hiker','sport','casual','worker','suit'];
 var cv=document.getElementById('cv'),R=new THREE.WebGLRenderer({canvas:cv,antialias:true});R.setPixelRatio(Math.min(2,window.devicePixelRatio||1));R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
 var S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(32,1,.1,200);cam.position.set(0,1.6,10);var ctl=new THREE.OrbitControls(cam,cv);ctl.target.set(0,.8,0);ctl.enableDamping=false;ctl.maxPolarAngle=1.5;ctl.minDistance=1;ctl.maxDistance=30;ctl.update();
-var dark=matchMedia('(prefers-color-scheme: dark)').matches;S.background=new THREE.Color(dark?0x1b1e22:0xeef0ec).convertSRGBToLinear();
+var dark=false;S.background=new THREE.Color(dark?0x1b1e22:0xeef0ec).convertSRGBToLinear();
 S.add(new THREE.HemisphereLight(0xffffff,0x8a8070,.8));var sun=new THREE.DirectionalLight(0xfff2dd,1.5);sun.position.set(-4,8,6);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);var sc=sun.shadow.camera;sc.left=-9;sc.right=9;sc.top=6;sc.bottom=-3;sc.far=30;sun.shadow.bias=-.0005;S.add(sun);
 var ground=new THREE.Mesh(new THREE.CircleGeometry(16,64),new THREE.MeshStandardMaterial({color:new THREE.Color(dark?0x2a2f35:0xd9dcd5).convertSRGBToLinear(),roughness:.95}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;S.add(ground);
 var CAST=[],POSE='stand',SPIN=false;
@@ -142,5 +142,16 @@ function loop(now){var dt=Math.min(.05,(now-last)/1000);last=now;if(SPIN&&!reduc
  R.render(S,cam);requestAnimationFrame(loop)}
 cast();requestAnimationFrame(loop);
 </script>
+<style>
+.labnav{position:fixed;z-index:30;top:12px;left:12px;display:flex;gap:2px;align-items:center;padding:4px;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.12);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);font:500 13px/1 Rubik,system-ui,Arial,sans-serif;max-width:calc(100vw - 24px);overflow-x:auto;box-sizing:border-box;scrollbar-width:none}
+.labnav::-webkit-scrollbar{display:none}
+.labnav a{color:#1f2328;text-decoration:none;padding:0 10px;border-radius:8px;white-space:nowrap;min-height:34px;display:flex;align-items:center}
+.labnav a:hover{background:rgba(0,0,0,.06)}
+.labnav a[aria-current="page"]{background:#f5c400;font-weight:600}
+.labnav a:focus-visible{outline:2px solid #1f2328;outline-offset:1px}
+.labnav .sep{width:1px;height:20px;background:rgba(0,0,0,.14);margin:0 4px;flex:none}
+@media (max-width:1150px){.labnav{right:12px}.lab,.panel{top:62px!important;max-height:calc(100vh - 74px)!important}}
+@media (max-width:600px){.lab{top:auto!important;max-height:46vh!important}}
+</style><nav class="labnav" aria-label="מעבר בין המעבדות"><a href="labs.html">כל המעבדות</a><span class="sep" aria-hidden="true"></span><a href="city-lab.html">מבנה העיר</a><a href="buildings-lab.html">בניינים</a><a href="pawn-lab.html" aria-current="page">דמויות</a><a href="people-lab.html">דמויות מפורטות</a><span class="sep" aria-hidden="true"></span><a href="index.html">דף הבית</a></nav>
 </body>
 </html>
