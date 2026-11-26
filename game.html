@@ -856,7 +856,7 @@ function announceUnlocks(){if(S.track==='pro'||S.allOpen)return;var n=opensAt(S.
 // ---------- impact card ----------
 function citySnap(){return {hh:households(),gan:Math.max(0,Math.round(ganGap())),school:Math.max(0,Math.round(schoolGap())),ops:opsFlow().net,trust:S.trust,infra:infraIdx().all}}
 function fullSnap(p){var keep=[];(p.tiles||[]).forEach(function(t){keep.push([t,t.occ]);if(t.occ!=null)t.occ=1});var r=citySnap();keep.forEach(function(k){k[0].occ=k[1]});return r}
-function complete(p){var skip=p.type==='border'||p.program,A=skip?null:citySnap(),ty=p.type,TN=TYPES[ty]?TYPES[ty].name:ty,mo=p.m0!=null?S.month-p.m0:null,dl=p.dly||0;
+function complete(p){jit('done');var skip=p.type==='border'||p.program,A=skip?null:citySnap(),ty=p.type,TN=TYPES[ty]?TYPES[ty].name:ty,mo=p.m0!=null?S.month-p.m0:null,dl=p.dly||0;
  S._holdLv=[];try{complete0(p)}finally{var held=S._holdLv;S._holdLv=null}
  if(!skip){var B=fullSnap(p),partial=(p.tiles||[]).some(function(t){return t.occ!=null&&t.occ<1});impactCard(p,TN,A,B,mo,dl,partial)}
  (held||[]).forEach(function(h){lvDebrief(h[0],h[1])})}
@@ -891,7 +891,7 @@ function dcat(id){if(id==='part')return null;if(/^(deposit|hearing|dpub)$/.test(
  if(/^(tender|cdocs|cpub|cwin|tcall|tabar|budget|grant|mashkal|gok|feas|rdev|rsign|rorg|revac)$/.test(id))return 'money';return 'build'}
 function lvStart(){S.lvs={m0:S.month,money:S.money,ops:S.ops,trust:S.trust,cap:S.capital,rel:S.relations,hh:households(),done:[],delay:{},saved:0,partCost:0,back:0}}
 function lvs(){if(!S.lvs)lvStart();return S.lvs}
-function lvStageStart(p,s,m,cut){p.stM0=S.month;p.stCut=cut||0;var L=lvs();if(cut)L.saved+=cut;if(s.id==='part')L.partCost+=m}
+function lvStageStart(p,s,m,cut){if(s.id==='deposit')jit('deposit');p.stM0=S.month;p.stCut=cut||0;var L=lvs();if(cut)L.saved+=cut;if(s.id==='part')L.partCost+=m}
 function lvStageEnd(p,s){if(p.stM0==null||!s)return;var c=dcat(s.id),act=S.month-p.stM0,d=Math.max(0,act-((s.months||0)-(p.stCut||0)));p.stM0=null;
  if(!c)return;var L=lvs();if(d>0){L.delay[c]=(L.delay[c]||0)+d;p.dly=(p.dly||0)+d}}
 function lvDone(p){var L=lvs();L.done.push({n:TYPES[p.type]?TYPES[p.type].name:p.type,mo:p.m0!=null?S.month-p.m0:null,dly:p.dly||0,part:p.partLevel||0,js:p.just?p.just.score:null,plan:!!p.needsPlan})}
@@ -2802,25 +2802,51 @@ var TSTEPS=[
  {t:'פותחים תיק',x:'בחרו את סוג המבנה ואת רמת שיתוף הציבור, ולחצו "לפתוח תיק".',el:'#side',done:function(){return S.projects.length>0}},
  {t:'הזמן מתקדם',x:'הזמן זז רק כשיש תיק פתוח. לחצו ▶ כדי להריץ, או ⏭ (מקש N) כדי להתקדם חודש אחד. חכו להחלטה הראשונה.',el:'.tools',done:function(){return S.inbox.length>0}},
  {t:'פעולה נדרשת',x:'בשלבים החשובים צריך להחליט איך לבצע אותם, והפרויקט מחכה לכם. פתחו את תיבת ההחלטות ובחרו.',el:'#inboxbtn',done:function(){return TUT.sawAct&&!S.modal}},
- {t:'פעולות שמחזקות את העיר',x:'בלשונית "פעולות" אפשר לחזק אמון, הון פוליטי ויחסים עם המחוזית, ולהגדיל את התקציב הרגיל. כל פעולה גם נראית בעיר.',el:'#side',next:true,show:function(){showTab('acts',true)}},
- {t:'נפתח לאט לאט',x:'בהתחלה פתוחים רק מוסדות ציבור ושטחים פתוחים. כל שלב שמשלימים פותח עוד כלים: בנייה חדשה ורשות הרישוי, אחר כך התחדשות ותשתיות, ובסוף תוכנית מתאר ותחום שיפוט. הכפתורים האפורים בסרגל מחכים לשלב שלהם.',el:'#rail',next:true},
- {t:'שלבים ויעדים',x:'בלשונית "העיר" רואים את כל שלבי המשחק ואת חמשת היעדים של התוכנית האסטרטגית ל-2035. מנצחים כשכל החמישה מתקיימים בבת אחת.',el:'#side',next:true,show:function(){showTab('city',true)}},
- {t:'לחיצה על המפה',x:'לחיצה על מבנה או על רחוב במפה מראה מה אפשר לעשות שם, מתוך מה שכבר פתוח.',el:'#rail',next:true},
- {t:'העיר בידיים שלכם',x:'השלב הנוכחי מופיע בסרגל התחתון, ולחיצה עליו פותחת את כל השלבים. המשחק נשמר אוטומטית בכל חודש. אפשר להפעיל את ההדרכה שוב מההגדרות. בהצלחה!',el:'.bottombar',next:true,last:true}];
+  {t:'נפתח לאט לאט',x:'בהתחלה פתוחים רק מוסדות ציבור ושטחים פתוחים. כל שלב שמשלימים פותח עוד כלים, והכפתורים האפורים בסרגל מחכים לשלב שלהם. כשמשהו חדש נפתח, יופיע טיפ קצר שמסביר אותו. המשחק נשמר אוטומטית בכל חודש. בהצלחה!',el:'#rail',next:true,last:true}];
 function tutSeen(){try{return localStorage.getItem('hufkeda-tut')==='1'}catch(e){return false}}
-function tutStart(){TUT={on:true,i:0,tile:null,sawAct:false};S.speed=0;renderHUD();document.getElementById('settings').hidden=true;tutShow()}
-function tutEnd(){TUT.on=false;TUT.tile=null;hl(null);document.getElementById('coach').hidden=true;try{localStorage.setItem('hufkeda-tut','1')}catch(e){}}
+function tutStart(){try{localStorage.removeItem('hufkeda-jit');localStorage.removeItem('hufkeda-jit-off')}catch(e){}JITQ=[];TUT={on:true,i:0,tile:null,sawAct:false,steps:TSTEPS};S.speed=0;renderHUD();document.getElementById('settings').hidden=true;tutShow()}
+function tutEnd(){var wasJit=TUT.jit;TUT.on=false;TUT.tile=null;hl(null);document.getElementById('coach').hidden=true;if(wasJit){jitMark(wasJit);if(TUT.prevSpeed!=null){S.speed=TUT.prevSpeed;TUT.prevSpeed=null;renderHUD()}TUT.jit=null;TUT.steps=TSTEPS;return}try{localStorage.setItem('hufkeda-tut','1')}catch(e){}}
 function hl(elm){document.querySelectorAll('.coach-hl').forEach(function(e){e.classList.remove('coach-hl')});if(elm)elm.classList.add('coach-hl')}
-function tutShow(){var s=TSTEPS[TUT.i];if(!s){tutEnd();return}if(s.show)s.show();var tt=s.tile==='pub'?S.tutPub:s.tile;TUT.tile=tt?tile(tt[0],tt[1]):null;if(tt)panTo(tt[0]+.5,tt[1]+.5);
- var c=document.getElementById('coach');c.innerHTML='';c.hidden=false;c.appendChild(el('span','cstep','הדרכה, '+(TUT.i+1)+' מתוך '+TSTEPS.length));c.appendChild(el('h4',null,s.t));c.appendChild(el('p',null,s.x));
- var bt=el('div','cbtns');if(s.next){var nb=el('button','primary',s.last?'סיום':'הבא');nb.type='button';nb.id='coach-next';nb.addEventListener('click',function(){TUT.i++;tutShow()});bt.appendChild(nb)}else bt.appendChild(el('span','hint2','מחכה לפעולה שלכם'));
- if(!s.last){var sk=el('button','skip','לדלג על ההדרכה');sk.type='button';sk.id='coach-skip';sk.addEventListener('click',tutEnd);bt.appendChild(sk)}c.appendChild(bt);tutPlace()}
-function tutPlace(){var s=TSTEPS[TUT.i];if(!s)return;var c=document.getElementById('coach'),elm=s.el?document.querySelector(s.el):null;if(elm&&elm.offsetParent===null&&!elm.getClientRects().length)elm=null;hl(elm);
+function tutShow(){var ST=TUT.steps||TSTEPS,s=ST[TUT.i];if(!s){tutEnd();return}if(s.show)s.show();var tt=s.tile==='pub'?S.tutPub:s.tile;TUT.tile=tt?tile(tt[0],tt[1]):null;if(tt)panTo(tt[0]+.5,tt[1]+.5);
+ var c=document.getElementById('coach');c.innerHTML='';c.hidden=false;c.appendChild(el('span','cstep',TUT.jit?(ST.length>1?'טיפ, '+(TUT.i+1)+' מתוך '+ST.length:'טיפ'):'הדרכה, '+(TUT.i+1)+' מתוך '+ST.length));c.appendChild(el('h4',null,s.t));c.appendChild(el('p',null,s.x));
+ var bt=el('div','cbtns');if(s.next){var nb=el('button','primary',s.last?(TUT.jit?'הבנתי':'סיום'):'הבא');nb.type='button';nb.id='coach-next';nb.addEventListener('click',function(){TUT.i++;tutShow()});bt.appendChild(nb)}else bt.appendChild(el('span','hint2','מחכה לפעולה שלכם'));
+ if(TUT.jit){var sk=el('button','skip','בלי טיפים');sk.type='button';sk.id='coach-skip';sk.addEventListener('click',function(){try{localStorage.setItem('hufkeda-jit-off','1')}catch(e){}JITQ=[];tutEnd()});bt.appendChild(sk)}else if(!s.last){var sk=el('button','skip','לדלג על ההדרכה');sk.type='button';sk.id='coach-skip';sk.addEventListener('click',tutEnd);bt.appendChild(sk)}c.appendChild(bt);tutPlace()}
+function tutPlace(){var s=(TUT.steps||TSTEPS)[TUT.i];if(!s)return;var c=document.getElementById('coach'),elm=s.el?document.querySelector(s.el):null;if(elm&&elm.offsetParent===null&&!elm.getClientRects().length)elm=null;hl(elm);
  var W=innerWidth,H=innerHeight,cw=c.offsetWidth,ch=c.offsetHeight,x,y;
  if(!elm){x=(W-cw)/2;y=s.tile?Math.max(80,H*0.18):H*0.28}else{var r=elm.getBoundingClientRect();
    if(r.bottom+ch+14<H&&r.height<H*0.5){y=r.bottom+14;x=r.left+r.width/2-cw/2}else if(r.top-ch-14>0&&r.height<H*0.5){y=r.top-ch-14;x=r.left+r.width/2-cw/2}else if(r.left-cw-14>0){x=r.left-cw-14;y=r.top+20}else{x=r.right+14;y=r.top+20}}
  c.style.left=Math.max(8,Math.min(W-cw-8,x))+'px';c.style.top=Math.max(8,Math.min(H-ch-8,y))+'px'}
-setInterval(function(){if(!TUT.on)return;var s=TSTEPS[TUT.i];if(s&&s.done&&s.done()){TUT.i++;tutShow()}else tutPlace()},300);
+setInterval(function(){jitTick();if(!TUT.on)return;var s=(TUT.steps||TSTEPS)[TUT.i];if(s&&s.done&&s.done()){TUT.i++;tutShow()}else tutPlace()},300);
+
+// ---------- just-in-time tips ----------
+var JIT={
+ permits:[{t:'רשות הרישוי נפתחה',x:'מעכשיו מגיעות בקשות להיתר מהתושבים ודיווחים של הפיקוח. לכל בקשה יש מועד חוקי. אם לא מחליטים בזמן, המבקשים מגישים ערר, והאמון והיחסים עם המחוזית יורדים.',el:'#tab-permits',next:true,show:function(){showTab('permits',true)}},
+  {t:'איך מחליטים',x:'בודקים כל בקשה מול התב"ע: לאשר, לפרסם הקלה או שימוש חורג, לסרב, או לקבוע שהיא פטורה מהיתר. אחרי כל החלטה מופיע הסבר מה היה נכון ולמה.',el:'#side',next:true},
+  {t:'בנייה בלי היתר',x:'דיווח פיקוח שלא מטפלים בו מתפשט לשכנים. האכיפה היא שרשרת: צו הפסקה, צו הריסה, לפעמים עתירה, ובסוף הריסה.',el:'#side',next:true,last:true}],
+ newbuild:[{t:'בנייה חדשה נפתחה',x:'שכונה, אזור תעשייה, מרכז מסחרי ומלון. פרויקטים גדולים שמביאים תושבים, ארנונה והיטלים, וגם ביקוש לגנים ולבתי ספר.',el:'#rail [data-cat="0"]',next:true},
+  {t:'ירוק או כתום',x:'במגרש ירוק התב"ע כבר מתירה, ומתחילים מהיתר. במגרש כתום צריך קודם תוכנית לשינוי ייעוד, וזה מוסיף בערך שנה וחצי עד שנתיים של ועדות והתנגדויות. לפעמים זה שווה.',el:null,next:true},
+  {t:'מי מוביל',x:'ביוזמה עירונית הרשות מממנת ושולטת בתמהיל ובצפיפות. יזם פרטי מממן חלק, אבל ידרוש הקלה לעוד קומות, וההקלה מחייבת פרסום לשכנים.',el:null,next:true,last:true}],
+ renew:[{t:'התחדשות ושימור נפתחו',x:'לחיצה על שיכון ותיק במפה מראה את האפשרויות: התחדשות בניינית, או התחדשות מתחמית של כמה שיכונים יחד. אלה תהליכים ארוכים, והדיירים צריכים לחתום.',el:'#rail [data-cat="1"]',next:true},
+  {t:'מבנים לשימור',x:'מבנה היסטורי אפשר להכליל ברשימת השימור או לקדם לו תוכנית שימור, ואחר כך לשקם. במבנה לשימור אין פטורים מהיתר.',el:null,next:true,last:true}],
+ infra:[{t:'תשתיות ברחובות נפתחו',x:'לחיצה על רחוב במפה מראה את מצבו. ניקוז וצל עצים נכנסים למדד התשתיות, שהוא אחד מחמשת היעדים של התוכנית האסטרטגית.',el:'#rail [data-cat="4"]',next:true},
+  {t:'עונות',x:'עצים נוטעים רק מנובמבר עד מרץ, והצל מגיע אחרי כמה שנים. ניקוז כדאי לסיים לפני החורף.',el:null,next:true,last:true}],
+ master:[{t:'תוכנית מתאר והסמכה',x:'תוכנית מתאר כוללנית היא השקעה ארוכה. כשהיא בתוקף, תוכניות שתואמות לה עוברות מהר יותר, ואפשר לבקש להסמיך את הוועדה המקומית. ועדה עצמאית מאשרת רוב התוכניות בלי המחוזית.',el:'#rail [data-cat="5"]',next:true},
+  {t:'תחום שיפוט',x:'כשנגמר המקום, אפשר לבקש להרחיב את תחום השיפוט. הבקשה עוברת במשרד הפנים ובוועדה גיאוגרפית ולוקחת שנים, וגם אחריה צריך תוכנית לשינוי ייעוד.',el:'#rail [data-cat="border"]',next:true,last:true}],
+ meter:[{t:'מדד יורד',x:'אמון, הון פוליטי או היחסים עם המחוזית ירדו נמוך, ובאפס יש מחיר. בלשונית "פעולות" אפשר לחזק אותם, וכל פעולה גם נראית בעיר.',el:'#side',next:true,last:true,show:function(){showTab('acts',true)}}],
+ staff:[{t:'כל המתכננים עסוקים',x:'כל תיק פתוח דורש מתכנן, ותיק בלי מתכנן לא זז. הכפתור + מגייס עוד, אבל גם גיוס הוא תהליך: תקן, מכרז, ועדת בוחנים וחוזה. שכר מתכנן יורד מהתקציב הרגיל כל חודש.',el:'#hire',next:true,last:true}],
+ deposit:[{t:'התוכנית הופקדה',x:'התוכנית פתוחה עכשיו לציבור, ומתחילה תקופת ההתנגדויות. כמה מתנגדים יגיעו תלוי בשיתוף הציבור שהיה לפני כן.',el:null,next:true,last:true}],
+ done:[{t:'הפרויקט הראשון הושלם',x:'בלשונית "העיר" רואים את שלבי המשחק ואת חמשת היעדים של התוכנית האסטרטגית ל-2035. מנצחים כשכל החמישה מתקיימים בבת אחת.',el:'#side',next:true,last:true,show:function(){showTab('city',true)}}]};
+var JITQ=[],JITCAT={'0':'newbuild',permits:'permits','1':'renew','4':'infra','5':'master',border:'master'};
+function jitSeenList(){try{return JSON.parse(localStorage.getItem('hufkeda-jit')||'[]')}catch(e){return []}}
+function jitMark(id){var a=jitSeenList();if(a.indexOf(id)<0)a.push(id);try{localStorage.setItem('hufkeda-jit',JSON.stringify(a))}catch(e){}}
+function jitOff(){try{return localStorage.getItem('hufkeda-jit-off')==='1'}catch(e){return false}}
+function jit(id){if(!JIT[id]||S.track==='pro'||jitOff()||JITQ.indexOf(id)>=0||TUT.jit===id||jitSeenList().indexOf(id)>=0)return;JITQ.push(id)}
+function jitTick(){if(typeof S==='undefined'||!S||!S.projects||S.over)return;
+ if(S.level>=1||unlocked('permits')){['0','permits','1','4','5','border'].forEach(function(k){if(S.track!=='pro'&&unlocked(k)&&S.level>=lockLevel(k)&&lockLevel(k)>0)jit(JITCAT[k])});levelCats(S.level).forEach(function(k){if(JITCAT[k])jit(JITCAT[k])})}
+ if(S.month>1&&(S.trust<35||S.capital<35||S.relations<35))jit('meter');
+ if(S.projects.length&&busy()>=S.staff)jit('staff');
+ if(TUT.on||S.modal||!JITQ.length)return;var id=JITQ.shift();if(jitSeenList().indexOf(id)>=0)return;
+ TUT={on:true,i:0,tile:null,sawAct:true,steps:JIT[id],jit:id,prevSpeed:S.speed};S.speed=0;renderHUD();tutShow()}
 // ---------- layout: tabs, side panel, skins ----------
 function showTab(name,user){S.tab=name;document.querySelectorAll('.pane').forEach(function(p){p.hidden=p.dataset.pane!==name});document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.tab===name))});if(user&&S.sideOpen===false)setSide(true)}
 function setSide(open){S.sideOpen=open;document.getElementById('side').hidden=!open;document.getElementById('side-open').hidden=open;document.body.classList.toggle('side-closed',!open);resize()}
