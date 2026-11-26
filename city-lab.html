@@ -157,20 +157,20 @@ var sun=new THREE.DirectionalLight(0xfff1d6,1.25);sun.castShadow=true;sun.shadow
 var AMB=new THREE.AmbientLight(0xffffff,.1);S.add(AMB);
 var city=new THREE.Group();S.add(city);
 // ---------- procedural textures ----------
-function canv(w,h,fn){var c=document.createElement('canvas');c.width=w;c.height=h;var g=c.getContext('2d');fn(g,w,h);var t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=Math.min(8,R.capabilities.getMaxAnisotropy());return t}
+function canv(w,h,fn){var c=document.createElement('canvas');c.width=w;c.height=h;var g=c.getContext('2d');fn(g,w,h);var t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=R.capabilities.getMaxAnisotropy();return t}
 function noise(g,w,h,a){var id=g.getImageData(0,0,w,h),d=id.data;for(var i=0;i<d.length;i+=4){var n=(Math.random()-.5)*a;d[i]+=n;d[i+1]+=n;d[i+2]+=n}g.putImageData(id,0,0)}
 var FAC={},emissiveMats=[];
-function facadeMat(key,o){if(FAC[key])return FAC[key];var fl=o.floors,cols=o.cols,W=cols*32,Hh=fl*32;
- var day=canv(W,Hh,function(g){g.fillStyle=o.wall;g.fillRect(0,0,W,Hh);noise(g,W,Hh,12);
+function facadeMat(key,o){if(FAC[key])return FAC[key];var fl=o.floors,cols=o.cols,W=cols*32,Hh=fl*32,FS=Math.max(1,Math.min(3,Math.floor(4096/Math.max(W,Hh))));
+ var day=canv(W*FS,Hh*FS,function(g){g.fillStyle=o.wall;g.fillRect(0,0,W*FS,Hh*FS);noise(g,W*FS,Hh*FS,8);g.scale(FS,FS);
    for(var f=0;f<fl;f++)for(var c=0;c<cols;c++){var x=c*32+7,y=f*32+8;
      if(o.balcony&&c%2===0){g.fillStyle='rgba(0,0,0,.22)';g.fillRect(x-5,y+15,28,4);g.fillStyle='rgba(255,255,255,.35)';g.fillRect(x-5,y+19,28,1)}
-     g.fillStyle=o.glass;g.fillRect(x,y,18,16);g.fillStyle='rgba(255,255,255,.2)';g.fillRect(x+1,y+1,6,14);if(o.glassbal){g.fillStyle='rgba(150,195,225,.6)';g.fillRect(c*32,y+16,32,8);g.fillStyle='rgba(255,255,255,.7)';g.fillRect(c*32,y+15,32,1.5)}
+     g.fillStyle='rgba(0,0,0,.18)';g.fillRect(x-1,y-1,20,18);g.fillStyle=o.glass;g.fillRect(x,y,18,16);g.fillStyle='rgba(255,255,255,.22)';g.fillRect(x+1.5,y+1.5,5,13);g.fillStyle='rgba(255,255,255,.55)';g.fillRect(x+8.6,y,.8,16);g.fillRect(x-1.5,y+16,21,1.4);if(o.glassbal){g.fillStyle='rgba(150,195,225,.6)';g.fillRect(c*32,y+16,32,8);g.fillStyle='rgba(255,255,255,.7)';g.fillRect(c*32,y+15,32,1.5)}
      if(o.shutter&&Math.random()<.5){g.fillStyle=o.shutter;g.fillRect(x,y,18,4+Math.random()*12)}
      if(o.ac&&Math.random()<.25){g.fillStyle='#e9e9e4';g.fillRect(x+19,y+10,9,6)}
      if(o.laundry&&Math.random()<.15){var cl=['#e8443a','#2f6fd6','#fff','#f5c400'];for(var k=0;k<3;k++){g.fillStyle=cl[(k+c)%4];g.fillRect(x+k*6,y+17,4,5)}}}
    if(o.band){g.fillStyle=o.band;g.fillRect(0,Hh-9,W,9)}
    if(o.shops){for(var c2=0;c2<cols;c2++){g.fillStyle=['#e8443a','#2f6fd6','#24b47e','#f5c400','#ff8a3d'][c2%5];g.fillRect(c2*32+2,Hh-30,28,6);g.fillStyle='#bfd7e6';g.fillRect(c2*32+4,Hh-23,24,21)}}});
- var night=canv(W,Hh,function(g){g.fillStyle='#000';g.fillRect(0,0,W,Hh);for(var f=0;f<fl;f++)for(var c=0;c<cols;c++)if(Math.random()<.45){g.fillStyle=Math.random()<.75?'#ffcf7a':'#cfe4ff';g.fillRect(c*32+7,f*32+8,18,16)}
+ var night=canv(W*FS,Hh*FS,function(g){g.fillStyle='#000';g.fillRect(0,0,W*FS,Hh*FS);g.scale(FS,FS);for(var f=0;f<fl;f++)for(var c=0;c<cols;c++)if(Math.random()<.45){g.fillStyle=Math.random()<.75?'#ffcf7a':'#cfe4ff';g.fillRect(c*32+7,f*32+8,18,16)}
    if(o.shops){g.fillStyle='#ffe2a8';g.fillRect(0,Hh-23,W,21)}});
  var m=new THREE.MeshStandardMaterial({map:day,emissive:new THREE.Color(0xffffff),emissiveMap:night,emissiveIntensity:0,roughness:.82});emissiveMats.push(m);FAC[key]=m;return m}
 var roadMat={h:new THREE.MeshStandardMaterial({roughness:.92,map:canv(256,256,function(g,w,h){g.fillStyle='#4a5056';g.fillRect(0,0,w,h);noise(g,w,h,16);
@@ -194,7 +194,26 @@ function cyl(rt,rb,h,mat,x,y,z,seg){var m=new THREE.Mesh(new THREE.CylinderGeome
 function plane(w,d,mat,x,y,z,ry){var m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),mat);m.rotation.x=-Math.PI/2;if(ry)m.rotation.z=ry;m.position.set(x,y,z);m.receiveShadow=true;return addRaw(m)}
 var trees=[],palms=[],olives=[],acs=[],parked=[],SIT=[],STAND=[],WANDER=[],smokeSources=[];
 function addTree(x,z,s,kind,r){(kind==='palm'?palms:kind==='olive'?olives:kind==='pine'?pines:trees).push([x,H(x,z),z,s||1,r==null?.14+Math.random()*.86:r])}
-function solarRow(x,y,z,len,alongX){var n=Math.max(2,Math.floor(len/2.4));for(var i=0;i<n;i++){var o=-len/2+1.2+i*(len-2.4)/(n-1);var px=alongX?x+o:x,pz=alongX?z:z+o;var p=box(1.5,.1,1.1,M.panel,px,y+.45,pz);p.rotation[alongX?'x':'z']=alongX?-.55:.55;var t=cyl(.32,.32,1.3,M.tank,px+(alongX?0:.95),y,pz+(alongX?.95:0),10);t.rotation[alongX?'z':'x']=Math.PI/2;t.position.y=y+.45}}
+
+function ruPart(m,x,y,z,ry,lx,ly,lz,rx,rz){var c=Math.cos(ry),sn=Math.sin(ry);m.position.set(x+lx*c+lz*sn,y+ly,z-lx*sn+lz*c);m.rotation.order='YXZ';m.rotation.set(rx||0,ry,rz||0);return m}
+function ruBox(w,h,d,mat,x,y,z,ry,lx,ly,lz,rx){return ruPart(box(w,h,d,mat,0,0,0),x,y,z,ry,lx,ly,lz,rx)}
+// solar water heater (dud shemesh): tilted collector, horizontal tank resting on its top edge, two side frames
+function dud(x,y,z,ry,pm){var a=.6,L=1,ca=Math.cos(a),sa=Math.sin(a),y0=.3,zh=L*ca,yh=y0+L*sa;
+ ruBox(1.2,.07,L,pm||M.heater,x,y,z,ry,0,y0+L/2*sa,L/2*ca,-a);
+ ruPart(cyl(.28,.28,1.2,M.tank,0,0,0,12),x,y,z,ry,0,yh+.2,zh+.08,0,Math.PI/2);
+ [-.52,.52].forEach(function(lx){
+  ruBox(.05,y0+.05,.05,M.metal,x,y,z,ry,lx,(y0+.05)/2,.03);
+  ruBox(.05,yh+.2,.05,M.metal,x,y,z,ry,lx,(yh+.2)/2,zh+.08);
+  ruBox(.05,.05,zh+.12,M.metal,x,y,z,ry,lx,.025,(zh+.08)/2+.01);
+  var zm=L*.5*ca,ym=y0+L*.5*sa-.06;ruBox(.05,.05,zh+.08-zm,M.metal,x,y,z,ry,lx,ym,(zm+zh+.08)/2)})}
+// photovoltaic panel on a low frame
+function pvUnit(x,y,z,ry,w,L,a,pm){var ca=Math.cos(a),sa=Math.sin(a),y0=.25,zh=L*ca,yh=y0+L*sa;
+ ruBox(w,.07,L,pm||M.panel,x,y,z,ry,0,y0+L/2*sa,L/2*ca,-a);
+ [-(w/2-.15),w/2-.15].forEach(function(lx){
+  ruBox(.05,y0+.05,.05,M.metal,x,y,z,ry,lx,(y0+.05)/2,.05);
+  ruBox(.05,yh-.02,.05,M.metal,x,y,z,ry,lx,(yh-.02)/2,zh-.07);
+  ruBox(.05,.05,zh,M.metal,x,y,z,ry,lx,.025,zh/2)})}
+function solarRow(x,y,z,len,alongX){var n=Math.max(2,Math.floor(len/2.4));for(var i=0;i<n;i++){var o=-len/2+1.2+i*(len-2.4)/(n-1);var px=alongX?x+o:x,pz=alongX?z:z+o;if(alongX)dud(px,y,pz-.45,0,M.panel);else dud(px-.45,y,pz,Math.PI/2,M.panel)}}
 function shikun(x,z,y,rot){var s=facadeMat('shikun',{floors:4,cols:8,wall:'#e3d6bd',glass:'#5d7287',shutter:'#d8d2c4',balcony:true,ac:true,laundry:true});mbox(8.4,12,3.8,s,M.roofFlat,x,y,z,rot);
  var alongX=!rot;solarRow(x,y+12,z,7,alongX);
  for(var f=0;f<4;f++)for(var k=0;k<3;k++){var o=-3+k*3+(Math.random()-.5);if(Math.random()<.6){var side=Math.random()<.5?1:-1;acs.push(alongX?[x+o,y+f*3+1.6,z+side*2.06,0,x,z]:[x+side*2.06,y+f*3+1.6,z+o,1,x,z])}}
@@ -557,8 +576,8 @@ var STY={shikun:{wall:'#e3d6bd',glass:'#5d7287',shutter:'#d8d2c4',balcony:true,a
  modern:{wall:'#f1ece2',glass:'#6f93ad',balcony:true,ac:true},tower:{wall:'#f4f0e8',glass:'#7499b3',balcony:true},comm:{wall:'#eadfca',glass:'#6b8396',shops:true,ac:true},office:{wall:'#a9bccb',glass:'#3f6d8f'}};
 function blockB(w,d,fl,sty,y0,px,pz){var o=STY[sty],cw=Math.max(2,Math.round(w/3.3)),cd=Math.max(2,Math.round(d/3.3)),fw=facadeMat(sty+fl+'w'+cw,Object.assign({floors:fl,cols:cw},o)),fd=facadeMat(sty+fl+'d'+cd,Object.assign({floors:fl,cols:cd},o));
  foot(w,d,px,pz);var m=new THREE.Mesh(new THREE.BoxGeometry(w,fl*3,d),[fd,fd,M.roofFlat,M.roofFlat,fw,fw]);m.position.set(px||0,(y0||0)+fl*1.5,pz||0);add(m);box(w+.3,.6,d+.3,M.roofFlat,px||0,(y0||0)+fl*3,pz||0);return m}
-function roofKit(w,d,top,heaters){if(heaters){[-d*.28,d*.1].forEach(function(zr){for(var x=-w/2+1.4;x<w/2-1;x+=1.9){box(1.2,.08,1,M.heater,x,top+.75,zr).rotation.x=-.6;var t=cyl(.3,.3,1.1,M.tank,x,top+.55,zr+.95,10);t.rotation.z=Math.PI/2;t.position.y=top+1.05;box(.08,.6,.08,M.metal,x,top,zr+.95)}})}
- else for(var x2=-w/2+2;x2<w/2-2;x2+=3)for(var z2=-d/2+2;z2<d/2-2;z2+=2.6)box(1.6,.1,1.1,M.panel,x2,top+.9,z2).rotation.x=-.4}
+function roofKit(w,d,top,heaters){if(heaters){[-d*.28,d*.1].forEach(function(zr){for(var x=-w/2+1.4;x<w/2-1;x+=1.9){dud(x,top,zr-.4,0)}})}
+ else for(var x2=-w/2+2;x2<w/2-2;x2+=3)for(var z2=-d/2+2;z2<d/2-2;z2+=2.6)pvUnit(x2,top,z2-.5,0,1.6,1.1,.4)}
 function yard(w,d,mat){plane(w,d,mat||M.lawn,0,.05,0)}
 function shikunLong(len){var d=10;yard(len+4,20);blockB(len,d,4,'shikun');roofKit(len,d,12.6,true);
  for(var x=-len/2+6;x<len/2-3;x+=12){box(2,2.6,.4,M.gate,x,0,d/2+.1);box(2.6,.15,1.4,M.roofFlat,x,2.7,d/2+.6)}
